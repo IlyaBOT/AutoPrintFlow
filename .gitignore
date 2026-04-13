@@ -1,0 +1,14 @@
+node_modules
+.next
+.env
+.env.local
+npm-debug.log*
+storage/*
+!storage/.gitkeep
+!storage/originals/.gitkeep
+!storage/final-stickers/.gitkeep
+!storage/previews/.gitkeep
+!storage/generated-stripes/.gitkeep
+!storage/generated-sheets/.gitkeep
+coverage
+.DS_Store

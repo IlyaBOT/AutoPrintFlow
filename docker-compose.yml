@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: autoprintflow
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d autoprintflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/autoprintflow?schema=public}
+      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-autoprintflow_session}
+      SESSION_SECRET: ${SESSION_SECRET:-change-me-before-production}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@autoprintflow.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin12345}
+      NODE_ENV: ${NODE_ENV:-production}
+    ports:
+      - "3000:3000"
+    volumes:
+      - app-storage:/app/storage
+
+volumes:
+  postgres-data:
+  app-storage:

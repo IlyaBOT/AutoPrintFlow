@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum StickerStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  PRINTED
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         Role      @default(USER)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  sessions     Session[]
+  stickers     Sticker[]
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Sticker {
+  id               String        @id @default(cuid())
+  userId           String
+  originalFilePath String
+  finalFilePath    String?
+  previewFilePath  String?
+  originalWidth    Int
+  originalHeight   Int
+  outputWidth      Int           @default(496)
+  outputHeight     Int           @default(496)
+  editorStateJson  Json
+  status           StickerStatus @default(DRAFT)
+  rejectReason     String?
+  submittedAt      DateTime?
+  approvedAt       DateTime?
+  printedAt        DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([status, approvedAt])
+  @@index([status, submittedAt])
+  @@index([printedAt])
+}
