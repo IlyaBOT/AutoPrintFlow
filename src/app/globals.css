@@ -1,5 +1,14 @@
 @import "@fontsource-variable/manrope";
 
+@font-face {
+  font-family: "Symbols Nerd Font";
+  src: url("https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@v3.2.1/patched-fonts/NerdFontsSymbolsOnly/Regular/SymbolsNerdFont-Regular.ttf")
+    format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -28,6 +37,28 @@
     --radius: 1.25rem;
   }
 
+  .dark {
+    --background: 222 35% 10%;
+    --foreground: 210 30% 96%;
+    --card: 222 32% 14%;
+    --card-foreground: 210 30% 96%;
+    --border: 220 18% 24%;
+    --input: 220 18% 20%;
+    --ring: 199 88% 62%;
+    --primary: 199 88% 62%;
+    --primary-foreground: 222 40% 10%;
+    --secondary: 222 26% 18%;
+    --secondary-foreground: 210 30% 96%;
+    --muted: 222 22% 16%;
+    --muted-foreground: 216 14% 64%;
+    --accent: 218 22% 18%;
+    --accent-foreground: 210 30% 96%;
+    --destructive: 0 62% 52%;
+    --destructive-foreground: 210 30% 96%;
+    --success: 148 46% 46%;
+    --success-foreground: 210 30% 96%;
+  }
+
   * {
     @apply border-border;
   }
@@ -51,12 +82,27 @@
     text-rendering: optimizeLegibility;
   }
 
+  .dark body {
+    background:
+      radial-gradient(circle at 0% 0%, rgba(35, 70, 120, 0.45), transparent 30%),
+      radial-gradient(circle at 100% 10%, rgba(20, 28, 48, 0.85), transparent 28%),
+      linear-gradient(180deg, rgba(13, 18, 30, 0.98), rgba(10, 14, 22, 1));
+  }
+
   ::selection {
     background: rgba(96, 163, 255, 0.25);
   }
 }
 
 @layer components {
+  .nf-icon {
+    font-family: "Symbols Nerd Font", "JetBrainsMono Nerd Font", "FiraCode Nerd Font", monospace;
+    font-weight: 400;
+    font-style: normal;
+    line-height: 1;
+    speak: none;
+  }
+
   .glass-panel {
     @apply border border-white/40 bg-white/55 shadow-panel backdrop-blur-2xl;
   }

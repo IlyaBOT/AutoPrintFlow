@@ -57,7 +57,7 @@ export default async function AdminStripeDetailsPage({
           </Button>
         </div>
         <div className="mt-6 overflow-hidden rounded-[30px] border border-white/60 bg-white/80 p-4">
-          <img src={`/api/admin/queue/stripe/${stripe.index}`} alt={`Stripe ${stripe.index}`} className="aspect-[1054/2229] w-full rounded-[24px] object-cover" />
+          <img src={`/api/admin/queue/stripe/${stripe.index}`} alt={`Stripe ${stripe.index}`} className="aspect-[1120/2409] w-full rounded-[24px] object-cover" />
         </div>
       </section>
 

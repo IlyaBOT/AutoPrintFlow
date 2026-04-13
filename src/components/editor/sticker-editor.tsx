@@ -355,6 +355,7 @@ export function StickerEditor({
               state={deferredState}
               originalWidth={originalWidth}
               originalHeight={originalHeight}
+              className="border border-black"
             />
           </CardContent>
         </Card>

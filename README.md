@@ -37,7 +37,7 @@ The repository uses a real Next.js App Router stack with Prisma, PostgreSQL, coo
 ## Layout and print logic
 
 - Sticker: `496 x 496 px`
-- Stripe: `1054 x 2229 px`
+- Stripe: `1120 x 2409 px`
 - A4 landscape: `3508 x 2480 px`
 - 1 stripe = 8 stickers
 - 1 A4 sheet = 3 stripes
@@ -45,7 +45,7 @@ The repository uses a real Next.js App Router stack with Prisma, PostgreSQL, coo
   - `stripes = ceil(approved_stickers / 8)`
   - `sheets = ceil(stripes / 3)`
 
-The PSD reference file mentioned in the specification was not available in the workspace at implementation time, so the stripe and A4 generators reproduce the requested composition directly in code: glassy blue background, rounded white sticker cards, black footer band, and clean landscape A4 placement.
+The stripe and A4 generators now mirror the uploaded PSD reference: sky/grass stripe background, rounded white sticker cards, the black “Printed by IB-WorkShop. 2026” footer band, and clean landscape A4 placement.
 
 ## Project structure
 

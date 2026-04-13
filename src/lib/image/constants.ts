@@ -1,7 +1,7 @@
 export const STICKER_SIZE_PX = 496;
 export const STRIPE_SIZE = {
-  width: 1054,
-  height: 2229,
+  width: 1120,
+  height: 2409,
 } as const;
 export const SHEET_SIZE = {
   width: 3508,

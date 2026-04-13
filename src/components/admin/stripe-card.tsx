@@ -14,7 +14,7 @@ export function StripeCard({ stripe }: { stripe: QueueStripe }) {
       </CardHeader>
       <CardContent>
         <div className="overflow-hidden rounded-[24px] border border-white/60 bg-white/80 p-3">
-          <img src={`/api/admin/queue/stripe/${stripe.index}`} alt={`Stripe ${stripe.index}`} className="aspect-[1054/2229] w-full rounded-[20px] object-cover" />
+          <img src={`/api/admin/queue/stripe/${stripe.index}`} alt={`Stripe ${stripe.index}`} className="aspect-[1120/2409] w-full rounded-[20px] object-cover" />
         </div>
       </CardContent>
       <CardFooter className="flex gap-3">

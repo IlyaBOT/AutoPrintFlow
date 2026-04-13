@@ -14,6 +14,8 @@ import {
 } from "@/lib/storage";
 import type { QueueSheet, QueueStripe, StickerEditorState } from "@/types/stickers";
 
+const RENDER_VERSION = "psd-v1";
+
 function formatNumber(value: number) {
   return Number(value.toFixed(4));
 }
@@ -111,68 +113,75 @@ export async function renderAndStoreStickerAssets(params: {
   };
 }
 
-function buildStripeBackgroundSvg(occupiedSlots: boolean[]) {
-  const cardPositions = [
-    { x: 15, y: 18 },
-    { x: 535, y: 18 },
-    { x: 15, y: 533 },
-    { x: 535, y: 533 },
-    { x: 15, y: 1048 },
-    { x: 535, y: 1048 },
-    { x: 15, y: 1563 },
-    { x: 535, y: 1563 },
-  ];
+const STRIPE_CARD_SIZE = 520;
+const STRIPE_CARD_RADIUS = 34;
+const STRIPE_CARD_GAP_X = 40;
+const STRIPE_CARD_GAP_Y = 56;
+const STRIPE_CARD_MARGIN_X = 20;
+const STRIPE_CARD_MARGIN_Y = 18;
+const STRIPE_CARD_SHADOW_OFFSET = { x: 6, y: 10 };
+const STRIPE_STICKER_INSET = Math.round((STRIPE_CARD_SIZE - STICKER_SIZE_PX) / 2);
+const STRIPE_FOOTER_HEIGHT = 110;
+const STRIPE_HORIZON_Y = 1270;
 
-  const cards = cardPositions
+const STRIPE_CARD_POSITIONS = Array.from({ length: 4 }, (_, row) =>
+  Array.from({ length: 2 }, (_, col) => ({
+    x: STRIPE_CARD_MARGIN_X + col * (STRIPE_CARD_SIZE + STRIPE_CARD_GAP_X),
+    y: STRIPE_CARD_MARGIN_Y + row * (STRIPE_CARD_SIZE + STRIPE_CARD_GAP_Y),
+  })),
+).flat();
+
+function buildStripeBackgroundSvg(occupiedSlots: boolean[]) {
+  const cards = STRIPE_CARD_POSITIONS
     .map((position, index) => {
       const filled = occupiedSlots[index];
+      const fill = filled ? "rgba(255,255,255,0.98)" : "rgba(255,255,255,0.94)";
       return `
         <g>
-          <rect x="${position.x + 6}" y="${position.y + 10}" width="504" height="504" rx="42" fill="rgba(33, 55, 92, 0.12)" />
-          <rect x="${position.x}" y="${position.y}" width="504" height="504" rx="42" fill="${filled ? "rgba(255,255,255,0.96)" : "rgba(255,255,255,0.82)"}" stroke="rgba(255,255,255,0.78)" stroke-width="2" />
-          ${filled ? "" : `<rect x="${position.x + 140}" y="${position.y + 246}" width="224" height="12" rx="6" fill="rgba(84, 116, 163, 0.18)" />
-              <rect x="${position.x + 246}" y="${position.y + 140}" width="12" height="224" rx="6" fill="rgba(84, 116, 163, 0.18)" />`}
+          <rect x="${position.x + STRIPE_CARD_SHADOW_OFFSET.x}" y="${position.y + STRIPE_CARD_SHADOW_OFFSET.y}" width="${STRIPE_CARD_SIZE}" height="${STRIPE_CARD_SIZE}" rx="${STRIPE_CARD_RADIUS}" fill="rgba(8, 14, 24, 0.18)" />
+          <rect x="${position.x}" y="${position.y}" width="${STRIPE_CARD_SIZE}" height="${STRIPE_CARD_SIZE}" rx="${STRIPE_CARD_RADIUS}" fill="${fill}" stroke="rgba(255,255,255,0.88)" stroke-width="2" />
+          ${filled ? "" : `<rect x="${position.x + 192}" y="${position.y + 252}" width="136" height="10" rx="5" fill="rgba(74, 104, 156, 0.18)" />
+              <rect x="${position.x + 252}" y="${position.y + 192}" width="10" height="136" rx="5" fill="rgba(74, 104, 156, 0.18)" />`}
         </g>
       `;
     })
     .join("");
 
+  const footerTop = STRIPE_SIZE.height - STRIPE_FOOTER_HEIGHT;
+
   return `
     <svg xmlns="http://www.w3.org/2000/svg" width="${STRIPE_SIZE.width}" height="${STRIPE_SIZE.height}" viewBox="0 0 ${STRIPE_SIZE.width} ${STRIPE_SIZE.height}">
       <defs>
-        <linearGradient id="stripeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#d7eaff" />
-          <stop offset="45%" stop-color="#b9d8ff" />
-          <stop offset="100%" stop-color="#84b7ff" />
+        <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#3b63b5" />
+          <stop offset="60%" stop-color="#7aa0dd" />
+          <stop offset="100%" stop-color="#9cb8e6" />
         </linearGradient>
-        <linearGradient id="footerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="#121820" />
-          <stop offset="100%" stop-color="#0a0f16" />
+        <linearGradient id="grassGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#7a934f" />
+          <stop offset="45%" stop-color="#4f6d35" />
+          <stop offset="100%" stop-color="#2f4a1c" />
         </linearGradient>
       </defs>
-      <rect width="${STRIPE_SIZE.width}" height="${STRIPE_SIZE.height}" rx="56" fill="url(#stripeGradient)" />
-      <circle cx="160" cy="180" r="220" fill="rgba(255,255,255,0.4)" />
-      <circle cx="944" cy="334" r="280" fill="rgba(255,255,255,0.2)" />
-      <circle cx="300" cy="2080" r="220" fill="rgba(72, 132, 216, 0.28)" />
-      <rect x="20" y="20" width="${STRIPE_SIZE.width - 40}" height="${STRIPE_SIZE.height - 40}" rx="46" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.45)" stroke-width="2" />
+      <rect width="${STRIPE_SIZE.width}" height="${STRIPE_SIZE.height}" fill="url(#skyGradient)" />
+      <rect y="${STRIPE_HORIZON_Y}" width="${STRIPE_SIZE.width}" height="${STRIPE_SIZE.height - STRIPE_HORIZON_Y}" fill="url(#grassGradient)" />
+      <rect y="${STRIPE_HORIZON_Y - 90}" width="${STRIPE_SIZE.width}" height="180" fill="rgba(255,255,255,0.12)" />
+      <circle cx="180" cy="180" r="120" fill="rgba(255,255,255,0.45)" />
+      <circle cx="300" cy="240" r="90" fill="rgba(255,255,255,0.35)" />
+      <circle cx="860" cy="180" r="140" fill="rgba(255,255,255,0.28)" />
+      <circle cx="980" cy="260" r="110" fill="rgba(255,255,255,0.22)" />
       ${cards}
-      <rect x="0" y="2087" width="${STRIPE_SIZE.width}" height="142" rx="0" fill="url(#footerGradient)" />
-      <rect x="64" y="2144" width="180" height="6" rx="3" fill="rgba(255,255,255,0.5)" />
-      <text x="988" y="2158" text-anchor="end" fill="rgba(255,255,255,0.72)" font-size="26" font-family="Manrope, Arial, sans-serif">AutoPrintFlow</text>
+      <rect x="0" y="${footerTop}" width="${STRIPE_SIZE.width}" height="${STRIPE_FOOTER_HEIGHT}" fill="#0a0a0a" />
+      <rect x="0" y="${footerTop}" width="${STRIPE_SIZE.width}" height="6" fill="rgba(255,255,255,0.08)" />
+      <text x="${STRIPE_SIZE.width / 2}" y="${footerTop + STRIPE_FOOTER_HEIGHT - 26}" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="30" font-family="Manrope, Arial, sans-serif">Printed by IB-WorkShop. 2026</text>
     </svg>
   `;
 }
 
-const STRIPE_CARD_COORDINATES = [
-  { left: 19, top: 22 },
-  { left: 539, top: 22 },
-  { left: 19, top: 537 },
-  { left: 539, top: 537 },
-  { left: 19, top: 1052 },
-  { left: 539, top: 1052 },
-  { left: 19, top: 1567 },
-  { left: 539, top: 1567 },
-];
+const STRIPE_CARD_COORDINATES = STRIPE_CARD_POSITIONS.map((position) => ({
+  left: position.x + STRIPE_STICKER_INSET,
+  top: position.y + STRIPE_STICKER_INSET,
+}));
 
 export async function renderStripePng(stripe: QueueStripe) {
   const background = sharp(Buffer.from(buildStripeBackgroundSvg(stripe.slots.map(Boolean)))).png();
@@ -199,26 +208,16 @@ export async function renderStripePng(stripe: QueueStripe) {
 function buildSheetSvg() {
   return `
     <svg xmlns="http://www.w3.org/2000/svg" width="${SHEET_SIZE.width}" height="${SHEET_SIZE.height}" viewBox="0 0 ${SHEET_SIZE.width} ${SHEET_SIZE.height}">
-      <defs>
-        <linearGradient id="sheetGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#f3f8ff" />
-          <stop offset="55%" stop-color="#d9eaff" />
-          <stop offset="100%" stop-color="#c5defd" />
-        </linearGradient>
-      </defs>
-      <rect width="${SHEET_SIZE.width}" height="${SHEET_SIZE.height}" rx="84" fill="url(#sheetGradient)" />
-      <circle cx="480" cy="310" r="420" fill="rgba(255,255,255,0.58)" />
-      <circle cx="3100" cy="430" r="500" fill="rgba(255,255,255,0.26)" />
-      <circle cx="1780" cy="2140" r="380" fill="rgba(90, 146, 226, 0.18)" />
-      <rect x="40" y="40" width="${SHEET_SIZE.width - 80}" height="${SHEET_SIZE.height - 80}" rx="68" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.52)" stroke-width="2" />
+      <rect width="${SHEET_SIZE.width}" height="${SHEET_SIZE.height}" fill="#ffffff" />
+      <rect x="18" y="18" width="${SHEET_SIZE.width - 36}" height="${SHEET_SIZE.height - 36}" rx="36" fill="none" stroke="rgba(15, 23, 42, 0.08)" stroke-width="2" />
     </svg>
   `;
 }
 
 const SHEET_STRIPE_POSITIONS = [
-  { left: 130, top: 125 },
-  { left: 1227, top: 125 },
-  { left: 2324, top: 125 },
+  { left: 37, top: 37 },
+  { left: 1194, top: 37 },
+  { left: 2351, top: 37 },
 ];
 
 export async function renderSheetPng(sheet: QueueSheet) {
@@ -246,11 +245,11 @@ export async function renderSheetPng(sheet: QueueSheet) {
 }
 
 function getStripeSeed(stripe: QueueStripe) {
-  return stripe.slots.map((slot) => slot?.id ?? "empty").join("-");
+  return [RENDER_VERSION, stripe.slots.map((slot) => slot?.id ?? "empty").join("-")].join("|");
 }
 
 function getSheetSeed(sheet: QueueSheet) {
-  return sheet.stripes.map((stripe) => getStripeSeed(stripe)).join("|");
+  return [RENDER_VERSION, sheet.stripes.map((stripe) => getStripeSeed(stripe)).join("|")].join("|");
 }
 
 export async function getOrCreateStripeFile(stripe: QueueStripe) {
