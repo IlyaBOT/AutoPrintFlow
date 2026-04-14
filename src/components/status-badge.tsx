@@ -1,37 +1,41 @@
+"use client";
+
 import type { StickerStatus } from "@prisma/client";
 
 import { Badge } from "@/components/ui/badge";
+import { useI18n } from "@/components/providers/i18n-provider";
 
 const statusConfig: Record<
   StickerStatus,
   {
-    label: string;
+    labelKey: string;
     variant: "secondary" | "warning" | "success" | "destructive";
   }
 > = {
   DRAFT: {
-    label: "Draft",
+    labelKey: "status.DRAFT",
     variant: "secondary",
   },
   SUBMITTED: {
-    label: "Submitted",
+    labelKey: "status.SUBMITTED",
     variant: "warning",
   },
   APPROVED: {
-    label: "Approved",
+    labelKey: "status.APPROVED",
     variant: "success",
   },
   REJECTED: {
-    label: "Rejected",
+    labelKey: "status.REJECTED",
     variant: "destructive",
   },
   PRINTED: {
-    label: "Printed",
+    labelKey: "status.PRINTED",
     variant: "secondary",
   },
 };
 
 export function StatusBadge({ status }: { status: StickerStatus }) {
+  const { t } = useI18n();
   const config = statusConfig[status];
-  return <Badge variant={config.variant}>{config.label}</Badge>;
+  return <Badge variant={config.variant}>{t(config.labelKey)}</Badge>;
 }

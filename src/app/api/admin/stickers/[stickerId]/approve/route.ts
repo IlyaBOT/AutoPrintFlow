@@ -2,27 +2,29 @@ import { StickerStatus } from "@prisma/client";
 
 import { getCurrentUser } from "@/lib/auth/session";
 import { jsonError, jsonSuccess } from "@/lib/http";
+import { getTranslator } from "@/lib/i18n-server";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(
   _request: Request,
   context: { params: Promise<{ stickerId: string }> },
 ) {
+  const { t } = await getTranslator();
   const user = await getCurrentUser();
 
   if (!user || user.role !== "ADMIN") {
-    return jsonError("Admin access required.", 403);
+    return jsonError(t("api.adminAccessRequired"), 403);
   }
 
   const { stickerId } = await context.params;
   const sticker = await prisma.sticker.findUnique({ where: { id: stickerId } });
 
   if (!sticker) {
-    return jsonError("Sticker not found.", 404);
+    return jsonError(t("api.stickerNotFound"), 404);
   }
 
   if (sticker.status !== StickerStatus.SUBMITTED) {
-    return jsonError("Only submitted stickers can be approved.", 422);
+    return jsonError(t("api.onlySubmittedCanBeApproved"), 422);
   }
 
   await prisma.sticker.update({
@@ -36,6 +38,6 @@ export async function POST(
 
   return jsonSuccess({
     success: true,
-    message: "Sticker approved.",
+    message: t("api.stickerApproved"),
   });
 }

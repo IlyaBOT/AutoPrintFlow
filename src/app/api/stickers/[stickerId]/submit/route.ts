@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/session";
 import { jsonError, jsonSuccess } from "@/lib/http";
+import { getTranslator } from "@/lib/i18n-server";
 import { submitSticker } from "@/lib/stickers";
 import { editorStateSchema } from "@/lib/validation";
 
@@ -10,10 +11,11 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ stickerId: string }> },
 ) {
+  const { t } = await getTranslator();
   const user = await getCurrentUser();
 
   if (!user) {
-    return jsonError("Authentication required.", 401);
+    return jsonError(t("api.authRequired"), 401);
   }
 
   const { stickerId } = await context.params;
@@ -25,7 +27,7 @@ export async function POST(
   });
 
   if (!sticker) {
-    return jsonError("Sticker not found.", 404);
+    return jsonError(t("api.stickerNotFound"), 404);
   }
 
   try {
@@ -35,10 +37,10 @@ export async function POST(
 
     return jsonSuccess({
       success: true,
-      message: "Sticker submitted for moderation.",
+      message: t("api.stickerSubmittedForModeration"),
     });
   } catch (error) {
     console.error(error);
-    return jsonError(error instanceof Error ? error.message : "Unable to submit sticker.", 422);
+    return jsonError(error instanceof Error ? error.message : t("api.unableToSubmitSticker"), 422);
   }
 }

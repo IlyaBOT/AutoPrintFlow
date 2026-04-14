@@ -5,16 +5,16 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-semibold transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-white",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-semibold transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950",
   {
     variants: {
       variant: {
         default:
           "bg-primary text-primary-foreground shadow-lg shadow-sky-500/25 hover:translate-y-[-1px] hover:bg-sky-500",
         secondary:
-          "bg-white/70 text-foreground shadow-soft ring-1 ring-inset ring-white/60 hover:bg-white/85",
-        ghost: "bg-transparent text-foreground hover:bg-white/50",
-        outline: "border border-white/60 bg-white/40 text-foreground hover:bg-white/70",
+          "bg-white/70 text-foreground shadow-soft ring-1 ring-inset ring-white/60 hover:bg-white/85 dark:bg-slate-100/12 dark:ring-white/10 dark:hover:bg-slate-100/18",
+        ghost: "bg-transparent text-foreground hover:bg-white/50 dark:hover:bg-slate-100/10",
+        outline: "border border-white/60 bg-white/40 text-foreground hover:bg-white/70 dark:border-white/10 dark:bg-slate-100/5 dark:hover:bg-slate-100/12",
         destructive:
           "bg-destructive text-destructive-foreground shadow-lg shadow-red-500/20 hover:bg-red-600",
       },

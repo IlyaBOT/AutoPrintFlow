@@ -1,6 +1,9 @@
-import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { X } from "lucide-react";
+"use client";
 
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+
+import { useI18n } from "@/components/providers/i18n-provider";
+import { NerdIcon } from "@/components/ui/nerd-icon";
 import { cn } from "@/lib/utils";
 
 const Dialog = DialogPrimitive.Root;
@@ -12,24 +15,28 @@ const DialogOverlay = ({ className, ...props }: DialogPrimitive.DialogOverlayPro
   <DialogPrimitive.Overlay className={cn("fixed inset-0 z-50 bg-slate-950/30 backdrop-blur-sm", className)} {...props} />
 );
 
-const DialogContent = ({ className, children, ...props }: DialogPrimitive.DialogContentProps) => (
-  <DialogPortal>
-    <DialogOverlay />
-    <DialogPrimitive.Content
-      className={cn(
-        "fixed left-1/2 top-1/2 z-50 w-[min(92vw,32rem)] -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-white/60 bg-white/92 p-6 shadow-panel backdrop-blur-2xl",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900">
-        <X className="h-4 w-4" />
-        <span className="sr-only">Close</span>
-      </DialogPrimitive.Close>
-    </DialogPrimitive.Content>
-  </DialogPortal>
-);
+const DialogContent = ({ className, children, ...props }: DialogPrimitive.DialogContentProps) => {
+  const { t } = useI18n();
+
+  return (
+    <DialogPortal>
+      <DialogOverlay />
+      <DialogPrimitive.Content
+        className={cn(
+          "fixed left-1/2 top-1/2 z-50 w-[min(92vw,32rem)] -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-white/60 bg-white/92 p-6 shadow-panel backdrop-blur-2xl",
+          className,
+        )}
+        {...props}
+      >
+        {children}
+        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900">
+          <NerdIcon className="text-sm" name="close" />
+          <span className="sr-only">{t("common.close")}</span>
+        </DialogPrimitive.Close>
+      </DialogPrimitive.Content>
+    </DialogPortal>
+  );
+};
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={cn("flex flex-col gap-2", className)} {...props} />

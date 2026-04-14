@@ -8,6 +8,7 @@ import sharp from "sharp";
 
 import { ACCEPTED_IMAGE_TYPES, MAX_UPLOAD_BYTES, STICKER_SIZE_PX } from "@/lib/image/constants";
 import { getDefaultEditorState, renderAndStoreStickerAssets } from "@/lib/image/renderers";
+import { getTranslator } from "@/lib/i18n-server";
 import { prisma } from "@/lib/prisma";
 import { STORAGE_DIRS, getMimeTypeFromPath, readStoredFile, writeStoredFile } from "@/lib/storage";
 import { parseEditorState } from "@/lib/validation";
@@ -24,19 +25,21 @@ export function isEditableStickerStatus(status: StickerStatus) {
 }
 
 export async function createStickerDraftFromUpload(params: { userId: string; file: File }) {
+  const { t } = await getTranslator();
+
   if (!ACCEPTED_IMAGE_TYPES.has(params.file.type)) {
-    throw new Error("Only PNG, JPG/JPEG, and WEBP files are supported.");
+    throw new Error(t("api.onlyPngJpgWebp"));
   }
 
   if (params.file.size > MAX_UPLOAD_BYTES) {
-    throw new Error("The file is too large. Upload an image up to 12 MB.");
+    throw new Error(t("api.fileTooLarge"));
   }
 
   const sourceBuffer = Buffer.from(await params.file.arrayBuffer());
   const metadata = await sharp(sourceBuffer).metadata();
 
   if (!metadata.width || !metadata.height) {
-    throw new Error("The uploaded image could not be processed.");
+    throw new Error(t("api.imageCouldNotBeProcessed"));
   }
 
   const stickerId = crypto.randomUUID();
@@ -75,10 +78,11 @@ export async function createStickerDraftFromUpload(params: { userId: string; fil
 }
 
 export async function saveStickerStateAndAssets(sticker: Sticker, editorState: StickerEditorState) {
+  const { t } = await getTranslator();
   const parsedState = parseEditorState(editorState);
 
   if (!isEditableStickerStatus(sticker.status)) {
-    throw new Error("This sticker can no longer be edited.");
+    throw new Error(t("api.stickerNoLongerEditable"));
   }
 
   const sourceBuffer = await readStoredFile(sticker.originalFilePath);

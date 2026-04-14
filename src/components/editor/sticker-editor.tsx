@@ -4,14 +4,15 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { startTransition, useDeferredValue, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, LoaderCircle, RefreshCcw, ScanSearch, Send, ZoomIn, ZoomOut } from "lucide-react";
 import { toast } from "sonner";
 
+import { useI18n } from "@/components/providers/i18n-provider";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NerdIcon } from "@/components/ui/nerd-icon";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { STICKER_SIZE_PX } from "@/lib/image/constants";
@@ -97,12 +98,14 @@ function StripeSlotPreview({
   originalWidth,
   originalHeight,
   filled,
+  emptyLabel,
 }: {
   imageUrl: string;
   state: StickerEditorState;
   originalWidth: number;
   originalHeight: number;
   filled: boolean;
+  emptyLabel: string;
 }) {
   return (
     <div className="relative aspect-square overflow-hidden rounded-[18px] border border-white/70 bg-white/95 shadow-sm">
@@ -116,7 +119,7 @@ function StripeSlotPreview({
         />
       ) : (
         <div className="flex h-full items-center justify-center bg-slate-50 text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">
-          Empty
+          {emptyLabel}
         </div>
       )}
     </div>
@@ -132,6 +135,7 @@ export function StickerEditor({
   originalAssetUrl,
   initialState,
 }: StickerEditorProps) {
+  const { t } = useI18n();
   const router = useRouter();
   const [editorState, setEditorState] = useState<StickerEditorState>(initialState);
   const deferredState = useDeferredValue(editorState);
@@ -156,10 +160,10 @@ export function StickerEditor({
       const result = (await response.json()) as { error?: string; message?: string };
 
       if (!response.ok) {
-        throw new Error(result.error ?? "Unable to update the sticker.");
+        throw new Error(result.error ?? t("editor.unableToUpdate"));
       }
 
-      toast.success(result.message ?? (mode === "save" ? "Draft saved." : "Sticker submitted."));
+      toast.success(result.message ?? (mode === "save" ? t("editor.draftSaved") : t("editor.stickerSubmitted")));
       startTransition(() => {
         router.refresh();
         if (mode === "submit") {
@@ -167,7 +171,7 @@ export function StickerEditor({
         }
       });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to update the sticker.");
+      toast.error(error instanceof Error ? error.message : t("editor.unableToUpdate"));
     } finally {
       setIsSaving(false);
     }
@@ -178,18 +182,16 @@ export function StickerEditor({
       <Card className="rounded-[36px]">
         <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-3">
-            <div className="section-kicker">Step 2</div>
-            <CardTitle className="text-3xl">Position the artwork inside the 42x42 mm frame</CardTitle>
-            <CardDescription>
-              Drag the image, scale it freely, stretch it horizontally or vertically, and rotate it if needed. The final export is a 496x496 px PNG.
-            </CardDescription>
+            <div className="section-kicker">{t("editor.step")}</div>
+            <CardTitle className="text-3xl">{t("editor.title")}</CardTitle>
+            <CardDescription>{t("editor.description")}</CardDescription>
           </div>
           <div className="flex items-center gap-3">
             <StatusBadge status={status} />
             {isLocked ? (
               <div className="flex items-center gap-2 rounded-full bg-white/70 px-4 py-2 text-sm text-slate-600">
-                <Lock className="h-4 w-4" />
-                Editing locked
+                <NerdIcon className="text-sm" name="lock" />
+                {t("editor.editingLocked")}
               </div>
             ) : null}
           </div>
@@ -205,7 +207,7 @@ export function StickerEditor({
               isLocked={isLocked}
             />
             <div className="rounded-[26px] bg-slate-950 px-5 py-4 text-sm text-slate-200">
-              The editor output is deterministic: the same transform state will always render the same PNG, stripe slot, and A4 sheet placement on the server.
+              {t("editor.deterministic")}
             </div>
           </div>
 
@@ -213,22 +215,22 @@ export function StickerEditor({
             {status === "REJECTED" && rejectReason ? (
               <Card className="rounded-[28px] border-red-200/80 bg-red-50/80">
                 <CardHeader>
-                  <CardTitle className="text-lg text-red-900">Rejected by moderation</CardTitle>
+                  <CardTitle className="text-lg text-red-900">{t("editor.rejectedByModeration")}</CardTitle>
                   <CardDescription className="text-red-800/80">{rejectReason}</CardDescription>
                 </CardHeader>
               </Card>
             ) : null}
             <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
               <Button type="button" variant="secondary" onClick={() => setEditorState(fitState)} disabled={isLocked}>
-                <ScanSearch className="h-4 w-4" />
-                Fit
+                <NerdIcon className="text-sm" name="fit" />
+                {t("editor.fit")}
               </Button>
               <Button type="button" variant="secondary" onClick={() => setEditorState(fillState)} disabled={isLocked}>
-                Fill
+                {t("editor.fill")}
               </Button>
               <Button type="button" variant="secondary" onClick={() => setEditorState(fitState)} disabled={isLocked}>
-                <RefreshCcw className="h-4 w-4" />
-                Reset
+                <NerdIcon className="text-sm" name="refresh" />
+                {t("editor.reset")}
               </Button>
             </div>
 
@@ -245,8 +247,8 @@ export function StickerEditor({
                 }
                 disabled={isLocked}
               >
-                <ZoomIn className="h-4 w-4" />
-                Zoom in
+                <NerdIcon className="text-sm" name="zoomIn" />
+                {t("editor.zoomIn")}
               </Button>
               <Button
                 type="button"
@@ -260,8 +262,8 @@ export function StickerEditor({
                 }
                 disabled={isLocked}
               >
-                <ZoomOut className="h-4 w-4" />
-                Zoom out
+                <NerdIcon className="text-sm" name="zoomOut" />
+                {t("editor.zoomOut")}
               </Button>
             </div>
 
@@ -269,7 +271,7 @@ export function StickerEditor({
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="scaleX">Horizontal scale</Label>
+                <Label htmlFor="scaleX">{t("editor.horizontalScale")}</Label>
                 <Input
                   id="scaleX"
                   type="range"
@@ -287,7 +289,7 @@ export function StickerEditor({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="scaleY">Vertical scale</Label>
+                <Label htmlFor="scaleY">{t("editor.verticalScale")}</Label>
                 <Input
                   id="scaleY"
                   type="range"
@@ -305,7 +307,7 @@ export function StickerEditor({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="rotation">Rotation</Label>
+                <Label htmlFor="rotation">{t("editor.rotation")}</Label>
                 <Input
                   id="rotation"
                   type="range"
@@ -328,15 +330,15 @@ export function StickerEditor({
 
             <div className="flex flex-col gap-3">
               <Button type="button" onClick={() => persist("save")} disabled={isLocked || isSaving}>
-                {isSaving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-                Save draft
+                {isSaving ? <NerdIcon className="text-sm" name="spinner" spin /> : null}
+                {t("editor.saveDraft")}
               </Button>
               <Button type="button" variant="secondary" onClick={() => persist("submit")} disabled={isLocked || isSaving}>
-                <Send className="h-4 w-4" />
-                Submit for moderation
+                <NerdIcon className="text-sm" name="send" />
+                {t("editor.submitForModeration")}
               </Button>
               <Button asChild type="button" variant="ghost">
-                <Link href="/dashboard">Back to dashboard</Link>
+                <Link href="/dashboard">{t("editor.backToDashboard")}</Link>
               </Button>
             </div>
           </div>
@@ -346,8 +348,8 @@ export function StickerEditor({
       <div className="space-y-6">
         <Card className="rounded-[36px]">
           <CardHeader>
-            <CardTitle>Final sticker preview</CardTitle>
-            <CardDescription>Live square output before the 496x496 px PNG is written to storage.</CardDescription>
+            <CardTitle>{t("editor.finalPreviewTitle")}</CardTitle>
+            <CardDescription>{t("editor.finalPreviewDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
             <PreviewScene
@@ -362,10 +364,8 @@ export function StickerEditor({
 
         <Card className="rounded-[36px] bg-[linear-gradient(180deg,rgba(210,230,255,0.84),rgba(170,207,255,0.78))]">
           <CardHeader>
-            <CardTitle>Stripe placement preview</CardTitle>
-            <CardDescription>
-              Approved stickers are grouped into stripes of 8. Your sticker occupies one protected slot once moderation passes.
-            </CardDescription>
+            <CardTitle>{t("editor.stripePreviewTitle")}</CardTitle>
+            <CardDescription>{t("editor.stripePreviewDescription")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-[28px] bg-slate-950/95 p-4 text-white shadow-soft">
@@ -378,12 +378,13 @@ export function StickerEditor({
                     originalWidth={originalWidth}
                     originalHeight={originalHeight}
                     filled={index === 0}
+                    emptyLabel={t("editor.emptySlot")}
                   />
                 ))}
               </div>
             </div>
             <div className="rounded-2xl bg-white/70 px-4 py-3 text-sm text-slate-600">
-              The live mockup mirrors the production stripe generator: 2 columns, 4 rows, soft white sticker cards, and a black footer band.
+              {t("editor.stripePreviewNote")}
             </div>
           </CardContent>
         </Card>

@@ -4,11 +4,16 @@ import { StickerTile } from "@/components/dashboard/sticker-tile";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatsCard } from "@/components/stats-card";
 import { requireUserPage } from "@/lib/auth/guards";
+import { getMessages, translate } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n-server";
 import { prisma } from "@/lib/prisma";
 import { getQueueStatsFromDb } from "@/lib/queue-data";
 
 export default async function DashboardPage() {
-  const user = await requireUserPage();
+  const [user, locale] = await Promise.all([requireUserPage(), getLocale()]);
+  const messages = getMessages(locale);
+  const t = (key: string, values?: Record<string, string | number | null | undefined>) =>
+    translate(messages, key, values);
 
   const [queueStats, stickers, statusCounts] = await Promise.all([
     getQueueStatsFromDb(),
@@ -39,23 +44,23 @@ export default async function DashboardPage() {
   return (
     <main className="page-shell space-y-8">
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <StatsCard label="Your Drafts" value={countFor("DRAFT")} helper="Still editable" />
-        <StatsCard label="Submitted" value={countFor("SUBMITTED")} helper="Waiting moderation" />
-        <StatsCard label="Approved Queue" value={queueStats.totalApprovedStickers} helper="Global approved stickers" />
-        <StatsCard label="Queue Stripes" value={queueStats.totalStripes} helper="Global printable stripes" />
-        <StatsCard label="Printed Archive" value={queueStats.printedCount} helper="Global printed items" />
+        <StatsCard label={t("dashboard.statsDraftsLabel")} value={countFor("DRAFT")} helper={t("dashboard.statsDraftsHelper")} />
+        <StatsCard label={t("dashboard.statsSubmittedLabel")} value={countFor("SUBMITTED")} helper={t("dashboard.statsSubmittedHelper")} />
+        <StatsCard label={t("dashboard.statsApprovedQueueLabel")} value={queueStats.totalApprovedStickers} helper={t("dashboard.statsApprovedQueueHelper")} />
+        <StatsCard label={t("dashboard.statsQueueStripesLabel")} value={queueStats.totalStripes} helper={t("dashboard.statsQueueStripesHelper")} />
+        <StatsCard label={t("dashboard.statsPrintedLabel")} value={queueStats.printedCount} helper={t("dashboard.statsPrintedHelper")} />
       </section>
 
       <section className="grid gap-6 xl:grid-cols-2">
         <div className="space-y-4">
           <div>
-            <div className="section-kicker">Recent drafts</div>
-            <h2 className="mt-2 text-2xl font-semibold text-slate-950">Continue editing</h2>
+            <div className="section-kicker">{t("dashboard.recentDraftsKicker")}</div>
+            <h2 className="mt-2 text-2xl font-semibold text-slate-950">{t("dashboard.recentDraftsTitle")}</h2>
           </div>
           {recentDrafts.length === 0 ? (
             <EmptyState
-              title="No editable drafts"
-              description="Create a new layout to upload artwork and start building a print-ready sticker."
+              title={t("dashboard.emptyDraftsTitle")}
+              description={t("dashboard.emptyDraftsDescription")}
             />
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
@@ -68,13 +73,13 @@ export default async function DashboardPage() {
 
         <div className="space-y-4">
           <div>
-            <div className="section-kicker">Submitted items</div>
-            <h2 className="mt-2 text-2xl font-semibold text-slate-950">Moderation status</h2>
+            <div className="section-kicker">{t("dashboard.submittedItemsKicker")}</div>
+            <h2 className="mt-2 text-2xl font-semibold text-slate-950">{t("dashboard.submittedItemsTitle")}</h2>
           </div>
           {recentSubmitted.length === 0 ? (
             <EmptyState
-              title="Nothing is pending moderation"
-              description="Once you submit a sticker, it will appear here with its moderation result and protected PNG download."
+              title={t("dashboard.emptySubmittedTitle")}
+              description={t("dashboard.emptySubmittedDescription")}
             />
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
@@ -88,13 +93,13 @@ export default async function DashboardPage() {
 
       <section className="space-y-4">
         <div>
-          <div className="section-kicker">All stickers</div>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-950">Your full private archive</h2>
+          <div className="section-kicker">{t("dashboard.allStickersKicker")}</div>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-950">{t("dashboard.allStickersTitle")}</h2>
         </div>
         {stickers.length === 0 ? (
           <EmptyState
-            title="No stickers yet"
-            description="Create your first layout to see sticker history, statuses, and protected downloads here."
+            title={t("dashboard.emptyArchiveTitle")}
+            description={t("dashboard.emptyArchiveDescription")}
           />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

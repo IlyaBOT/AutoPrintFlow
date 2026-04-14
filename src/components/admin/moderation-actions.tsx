@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { StickerStatus } from "@prisma/client";
-import { CheckCheck, LoaderCircle, Printer, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
+import { useI18n } from "@/components/providers/i18n-provider";
 import { Button } from "@/components/ui/button";
+import { NerdIcon } from "@/components/ui/nerd-icon";
 import { Textarea } from "@/components/ui/textarea";
 
 type ModerationActionsProps = {
@@ -15,6 +16,7 @@ type ModerationActionsProps = {
 };
 
 export function ModerationActions({ stickerId, status }: ModerationActionsProps) {
+  const { t } = useI18n();
   const router = useRouter();
   const [rejectReason, setRejectReason] = useState("");
   const [pendingAction, setPendingAction] = useState<null | "approve" | "reject" | "printed">(null);
@@ -34,13 +36,13 @@ export function ModerationActions({ stickerId, status }: ModerationActionsProps)
       const result = (await response.json()) as { error?: string; message?: string };
 
       if (!response.ok) {
-        throw new Error(result.error ?? "Admin action failed.");
+        throw new Error(result.error ?? t("admin.actionFailed"));
       }
 
-      toast.success(result.message ?? "Updated.");
+      toast.success(result.message ?? t("admin.updated"));
       router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Admin action failed.");
+      toast.error(error instanceof Error ? error.message : t("admin.actionFailed"));
     } finally {
       setPendingAction(null);
     }
@@ -56,8 +58,8 @@ export function ModerationActions({ stickerId, status }: ModerationActionsProps)
         <>
           <div className="flex gap-3">
             <Button className="flex-1" size="sm" onClick={() => runAction("approve")} disabled={pendingAction !== null}>
-              {pendingAction === "approve" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CheckCheck className="h-4 w-4" />}
-              Approve
+              {pendingAction === "approve" ? <NerdIcon className="text-sm" name="spinner" spin /> : <NerdIcon className="text-sm" name="check" />}
+              {t("admin.approve")}
             </Button>
             <Button
               className="flex-1"
@@ -66,12 +68,12 @@ export function ModerationActions({ stickerId, status }: ModerationActionsProps)
               onClick={() => runAction("reject")}
               disabled={pendingAction !== null}
             >
-              {pendingAction === "reject" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
-              Reject
+              {pendingAction === "reject" ? <NerdIcon className="text-sm" name="spinner" spin /> : <NerdIcon className="text-sm" name="reject" />}
+              {t("admin.reject")}
             </Button>
           </div>
           <Textarea
-            placeholder="Reject reason"
+            placeholder={t("admin.rejectReasonPlaceholder")}
             value={rejectReason}
             onChange={(event) => setRejectReason(event.target.value)}
             className="min-h-24"
@@ -81,8 +83,8 @@ export function ModerationActions({ stickerId, status }: ModerationActionsProps)
 
       {status === "APPROVED" ? (
         <Button className="w-full" size="sm" variant="secondary" onClick={() => runAction("printed")} disabled={pendingAction !== null}>
-          {pendingAction === "printed" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
-          Mark printed
+          {pendingAction === "printed" ? <NerdIcon className="text-sm" name="spinner" spin /> : <NerdIcon className="text-sm" name="printer" />}
+          {t("admin.markPrinted")}
         </Button>
       ) : null}
     </div>

@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 
 import { getCurrentUser } from "@/lib/auth/session";
 import { jsonError } from "@/lib/http";
+import { getTranslator } from "@/lib/i18n-server";
 import { getOrCreateStripeFile } from "@/lib/image/renderers";
 import { getApprovedQueueLayout } from "@/lib/queue-data";
 import { readStoredFile } from "@/lib/storage";
@@ -10,24 +11,25 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ stripeNumber: string }> },
 ) {
+  const { t } = await getTranslator();
   const user = await getCurrentUser();
 
   if (!user || user.role !== "ADMIN") {
-    return jsonError("Admin access required.", 403);
+    return jsonError(t("api.adminAccessRequired"), 403);
   }
 
   const { stripeNumber } = await context.params;
   const index = Number(stripeNumber);
 
   if (!Number.isInteger(index) || index < 1) {
-    return jsonError("Stripe number is invalid.", 422);
+    return jsonError(t("api.stripeNumberInvalid"), 422);
   }
 
   const { stripes } = await getApprovedQueueLayout();
   const stripe = stripes[index - 1];
 
   if (!stripe) {
-    return jsonError("Stripe not found.", 404);
+    return jsonError(t("api.stripeNotFound"), 404);
   }
 
   const filePath = await getOrCreateStripeFile(stripe);

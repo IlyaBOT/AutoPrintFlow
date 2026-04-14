@@ -2,13 +2,15 @@
 
 import { startTransition, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ImagePlus, LoaderCircle, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 
+import { useI18n } from "@/components/providers/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { NerdIcon } from "@/components/ui/nerd-icon";
 
 export function UploadPanel() {
+  const { t } = useI18n();
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -21,7 +23,7 @@ export function UploadPanel() {
     const file = formData.get("file");
 
     if (!(file instanceof File) || file.size === 0) {
-      toast.error("Choose an image before continuing.");
+      toast.error(t("upload.chooseImage"));
       return;
     }
 
@@ -39,15 +41,15 @@ export function UploadPanel() {
       const result = (await response.json()) as { error?: string; stickerId?: string };
 
       if (!response.ok || !result.stickerId) {
-        throw new Error(result.error ?? "Upload failed.");
+        throw new Error(result.error ?? t("upload.uploadFailed"));
       }
 
-      toast.success("Image uploaded.");
+      toast.success(t("upload.imageUploaded"));
       startTransition(() => {
         router.push(`/editor/${result.stickerId}`);
       });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Upload failed.");
+      toast.error(error instanceof Error ? error.message : t("upload.uploadFailed"));
     } finally {
       setIsPending(false);
     }
@@ -56,10 +58,10 @@ export function UploadPanel() {
   return (
     <Card className="rounded-[36px]">
       <CardHeader className="space-y-3">
-        <div className="section-kicker">Step 1</div>
-        <CardTitle className="text-3xl">Upload a source image</CardTitle>
+        <div className="section-kicker">{t("upload.step")}</div>
+        <CardTitle className="text-3xl">{t("upload.title")}</CardTitle>
         <CardDescription>
-          PNG, JPG/JPEG, and WEBP are supported. Square images work best, but the editor can crop and stretch any ratio into the final sticker frame.
+          {t("upload.description")}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -69,11 +71,13 @@ export function UploadPanel() {
             className="group flex min-h-72 cursor-pointer flex-col items-center justify-center rounded-[32px] border border-dashed border-sky-300/80 bg-gradient-to-br from-white/75 to-sky-50/70 p-8 text-center transition hover:border-sky-400 hover:bg-white/85"
           >
             <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-[22px] bg-slate-950 text-white shadow-lg shadow-slate-900/15">
-              <UploadCloud className="h-7 w-7" />
+              <NerdIcon className="text-2xl" name="upload" />
             </div>
-            <div className="text-xl font-semibold text-slate-950">{fileName ?? "Drop an image here or click to browse"}</div>
+            <div className="text-xl font-semibold text-slate-950 dark:text-slate-100">
+              {fileName ?? t("upload.dropzoneTitle")}
+            </div>
             <p className="mt-3 max-w-md text-sm text-muted-foreground">
-              The app stores the original upload privately, generates the 42x42 mm export, and keeps all sticker files protected behind session checks.
+              {t("upload.dropzoneDescription")}
             </p>
             <input
               ref={inputRef}
@@ -89,12 +93,12 @@ export function UploadPanel() {
             />
           </label>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="rounded-2xl bg-white/60 px-4 py-3 text-sm text-slate-600">
-              Recommended: upload the highest-resolution original you have for cleaner scaling and safer moderation previews.
+            <div className="rounded-2xl bg-white/60 px-4 py-3 text-sm text-slate-600 dark:bg-slate-900/55 dark:text-slate-300">
+              {t("upload.recommended")}
             </div>
             <Button type="submit" disabled={isPending}>
-              {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
-              Continue to editor
+              {isPending ? <NerdIcon className="text-sm" name="spinner" spin /> : <NerdIcon className="text-sm" name="image" />}
+              {t("upload.continueToEditor")}
             </Button>
           </div>
         </form>

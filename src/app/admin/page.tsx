@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAdminPage } from "@/lib/auth/guards";
+import { getMessages, translate } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n-server";
 import { prisma } from "@/lib/prisma";
 import { getApprovedQueueLayout, getQueueStatsFromDb } from "@/lib/queue-data";
 import { formatDate } from "@/lib/utils";
@@ -17,9 +19,13 @@ function ModerationList({
   description,
   stickers,
   showActions = false,
+  locale,
+  t,
 }: {
   title: string;
   description: string;
+  locale: "en" | "ru";
+  t: (key: string, values?: Record<string, string | number | null | undefined>) => string;
   stickers: Array<{
     id: string;
     status: StickerStatus;
@@ -58,19 +64,19 @@ function ModerationList({
             <CardContent className="grid gap-4 lg:grid-cols-[128px_minmax(0,1fr)]">
               <img
                 src={`/api/stickers/${sticker.id}/asset?variant=preview`}
-                alt={`Sticker ${sticker.id}`}
+                alt={t("common.stickerPreviewAlt", { id: sticker.id })}
                 className="aspect-square w-full rounded-[24px] border border-white/60 bg-white object-cover p-2"
               />
               <div className="space-y-3 text-sm text-slate-600">
-                <div>ID: {sticker.id}</div>
-                <div>Created: {formatDate(sticker.createdAt)}</div>
-                <div>Submitted: {formatDate(sticker.submittedAt)}</div>
-                <div>Approved: {formatDate(sticker.approvedAt)}</div>
-                <div>Printed: {formatDate(sticker.printedAt)}</div>
-                {sticker.rejectReason ? <div>Reject reason: {sticker.rejectReason}</div> : null}
+                <div>{t("admin.metadataId")}: {sticker.id}</div>
+                <div>{t("admin.metadataCreated")}: {formatDate(locale, sticker.createdAt, t("common.notAvailable"))}</div>
+                <div>{t("admin.metadataSubmitted")}: {formatDate(locale, sticker.submittedAt, t("common.notAvailable"))}</div>
+                <div>{t("admin.metadataApproved")}: {formatDate(locale, sticker.approvedAt, t("common.notAvailable"))}</div>
+                <div>{t("admin.metadataPrinted")}: {formatDate(locale, sticker.printedAt, t("common.notAvailable"))}</div>
+                {sticker.rejectReason ? <div>{t("admin.metadataRejectReason")}: {sticker.rejectReason}</div> : null}
                 <div className="flex flex-wrap gap-3">
                   <a className="text-sm font-semibold text-sky-700" href={`/api/stickers/${sticker.id}/asset?variant=final&download=1`}>
-                    Download sticker PNG
+                    {t("admin.downloadStickerPng")}
                   </a>
                 </div>
                 {showActions ? <ModerationActions stickerId={sticker.id} status={sticker.status} /> : null}
@@ -84,6 +90,11 @@ function ModerationList({
 }
 
 export default async function AdminPage() {
+  const locale = await getLocale();
+  const messages = getMessages(locale);
+  const t = (key: string, values?: Record<string, string | number | null | undefined>) =>
+    translate(messages, key, values);
+
   await requireAdminPage();
 
   const [stats, queueLayout, submitted, approved, rejected, printed] = await Promise.all([
@@ -116,22 +127,22 @@ export default async function AdminPage() {
   return (
     <main className="page-shell space-y-8">
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <StatsCard label="Submitted" value={stats.submittedCount} helper="Waiting for admin moderation" />
-        <StatsCard label="Approved" value={stats.approvedWaitingCount} helper="Printable queue size" />
-        <StatsCard label="Stripes" value={stats.totalStripes} helper="8 stickers per stripe" />
-        <StatsCard label="A4 Sheets" value={stats.totalSheets} helper="3 stripes per sheet" />
-        <StatsCard label="Printed" value={stats.printedCount} helper="Archived as printed" />
+        <StatsCard label={t("admin.statsSubmittedLabel")} value={stats.submittedCount} helper={t("admin.statsSubmittedHelper")} />
+        <StatsCard label={t("admin.statsApprovedLabel")} value={stats.approvedWaitingCount} helper={t("admin.statsApprovedHelper")} />
+        <StatsCard label={t("admin.statsStripesLabel")} value={stats.totalStripes} helper={t("admin.statsStripesHelper")} />
+        <StatsCard label={t("admin.statsSheetsLabel")} value={stats.totalSheets} helper={t("admin.statsSheetsHelper")} />
+        <StatsCard label={t("admin.statsPrintedLabel")} value={stats.printedCount} helper={t("admin.statsPrintedHelper")} />
       </section>
 
       <section className="space-y-4">
         <div>
-          <div className="section-kicker">Printable queue</div>
-          <h2 className="mt-2 text-3xl font-semibold text-slate-950">A4 sheets grouped from approved stickers</h2>
+          <div className="section-kicker">{t("admin.printableQueueKicker")}</div>
+          <h2 className="mt-2 text-3xl font-semibold text-slate-950">{t("admin.printableQueueTitle")}</h2>
         </div>
         {queueLayout.sheets.length === 0 ? (
           <EmptyState
-            title="No printable sheets yet"
-            description="Approved stickers will appear here automatically, grouped by approval time into stripes and landscape A4 sheets."
+            title={t("admin.printableQueueEmptyTitle")}
+            description={t("admin.printableQueueEmptyDescription")}
           />
         ) : (
           <div className="grid gap-5 xl:grid-cols-2">
@@ -145,38 +156,46 @@ export default async function AdminPage() {
       <section>
         <Tabs defaultValue="submitted">
           <TabsList>
-            <TabsTrigger value="submitted">Submitted</TabsTrigger>
-            <TabsTrigger value="approved">Approved</TabsTrigger>
-            <TabsTrigger value="rejected">Rejected</TabsTrigger>
-            <TabsTrigger value="printed">Printed</TabsTrigger>
+            <TabsTrigger value="submitted">{t("admin.tabSubmitted")}</TabsTrigger>
+            <TabsTrigger value="approved">{t("admin.tabApproved")}</TabsTrigger>
+            <TabsTrigger value="rejected">{t("admin.tabRejected")}</TabsTrigger>
+            <TabsTrigger value="printed">{t("admin.tabPrinted")}</TabsTrigger>
           </TabsList>
           <TabsContent value="submitted">
             <ModerationList
-              title="Pending moderation"
-              description="Approve or reject submitted stickers before they enter the printable queue."
+              title={t("admin.pendingModerationTitle")}
+              description={t("admin.pendingModerationDescription")}
+              locale={locale}
+              t={t}
               stickers={submitted}
               showActions
             />
           </TabsContent>
           <TabsContent value="approved">
             <ModerationList
-              title="Approved queue"
-              description="Approved stickers are already packed into queue sheets. Use mark printed when production is complete."
+              title={t("admin.approvedQueueTitle")}
+              description={t("admin.approvedQueueDescription")}
+              locale={locale}
+              t={t}
               stickers={approved}
               showActions
             />
           </TabsContent>
           <TabsContent value="rejected">
             <ModerationList
-              title="Rejected stickers"
-              description="Rejected items remain visible for audit and can be reworked by the user."
+              title={t("admin.rejectedTitle")}
+              description={t("admin.rejectedDescription")}
+              locale={locale}
+              t={t}
               stickers={rejected}
             />
           </TabsContent>
           <TabsContent value="printed">
             <ModerationList
-              title="Printed archive"
-              description="Archive of stickers already marked as printed."
+              title={t("admin.printedTitle")}
+              description={t("admin.printedDescription")}
+              locale={locale}
+              t={t}
               stickers={printed}
             />
           </TabsContent>

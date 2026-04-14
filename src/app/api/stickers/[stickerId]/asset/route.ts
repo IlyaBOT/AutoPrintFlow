@@ -3,16 +3,18 @@ export const runtime = "nodejs";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/session";
 import { jsonError } from "@/lib/http";
+import { getTranslator } from "@/lib/i18n-server";
 import { getMimeTypeFromPath, readStoredFile } from "@/lib/storage";
 
 export async function GET(
   request: Request,
   context: { params: Promise<{ stickerId: string }> },
 ) {
+  const { t } = await getTranslator();
   const user = await getCurrentUser();
 
   if (!user) {
-    return jsonError("Authentication required.", 401);
+    return jsonError(t("api.authRequired"), 401);
   }
 
   const { stickerId } = await context.params;
@@ -31,7 +33,7 @@ export async function GET(
   });
 
   if (!sticker) {
-    return jsonError("Sticker not found.", 404);
+    return jsonError(t("api.stickerNotFound"), 404);
   }
 
   const url = new URL(request.url);
@@ -45,7 +47,7 @@ export async function GET(
         : sticker.finalFilePath;
 
   if (!selectedPath) {
-    return jsonError("Requested asset is not available.", 404);
+    return jsonError(t("api.requestedAssetUnavailable"), 404);
   }
 
   const buffer = await readStoredFile(selectedPath);
