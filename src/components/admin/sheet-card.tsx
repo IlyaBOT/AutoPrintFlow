@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { useI18n } from "@/components/providers/i18n-provider";
+import { SheetPrintButton } from "@/components/admin/sheet-print-button";
 import type { QueueSheet } from "@/types/stickers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +50,7 @@ export function SheetCard({ sheet }: { sheet: QueueSheet }) {
             {t("admin.downloadA4")}
           </a>
         </Button>
+        <SheetPrintButton className="flex-1" sheetIndex={sheet.index} />
         <Button asChild className="flex-1" variant="ghost">
           <Link href={`/admin/sheets/${sheet.index}`}>
             <NerdIcon className="text-sm" name="layers" />

@@ -229,7 +229,9 @@
     "printQueueTab": "Print queue",
     "systemSettingsTab": "System Settings",
     "accountTitle": "Настройки аккаунта",
-    "accountDescription": "Измените профиль администратора, пароль или полностью удалите аккаунт."
+    "accountDescription": "Измените профиль администратора, пароль или полностью удалите аккаунт.",
+    "markSheetPrinted": "Отметить лист напечатанным",
+    "sheetMarkedPrinted": "Лист и входящие в него стикеры отмечены как напечатанные."
   },
   "notFound": {
     "kicker": "Не найдено",

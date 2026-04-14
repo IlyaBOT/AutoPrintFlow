@@ -229,7 +229,9 @@
     "printQueueTab": "Print queue",
     "systemSettingsTab": "System Settings",
     "accountTitle": "Account settings",
-    "accountDescription": "Update your admin profile, password, or remove the account entirely."
+    "accountDescription": "Update your admin profile, password, or remove the account entirely.",
+    "markSheetPrinted": "Mark sheet printed",
+    "sheetMarkedPrinted": "Sheet and included stickers marked as printed."
   },
   "notFound": {
     "kicker": "Not found",

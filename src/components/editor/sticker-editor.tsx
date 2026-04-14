@@ -33,6 +33,18 @@ type StickerEditorProps = {
   originalHeight: number;
   originalAssetUrl: string;
   initialState: StickerEditorState;
+  stripePreviewSlots: Array<
+    | {
+        kind: "current";
+        id: string;
+      }
+    | {
+        kind: "existing";
+        id: string;
+        imageUrl: string | null;
+      }
+    | null
+  >;
 };
 
 function buildFitState(originalWidth: number, originalHeight: number) {
@@ -97,17 +109,17 @@ function StripeSlotPreview({
   state,
   originalWidth,
   originalHeight,
-  filled,
+  mode,
 }: {
   imageUrl: string;
   state: StickerEditorState;
   originalWidth: number;
   originalHeight: number;
-  filled: boolean;
+  mode: "current" | "existing" | "empty";
 }) {
   return (
-    <div className="relative aspect-square overflow-hidden rounded-[18px] border border-white/70 bg-white/95 shadow-sm">
-      {filled ? (
+    <div className="relative aspect-square overflow-hidden rounded-[22px] bg-white p-4 shadow-sm">
+      {mode === "current" ? (
         <PreviewScene
           imageUrl={imageUrl}
           state={state}
@@ -115,8 +127,12 @@ function StripeSlotPreview({
           originalHeight={originalHeight}
           className="rounded-[18px]"
         />
+      ) : mode === "existing" ? (
+        <div className="h-full overflow-hidden rounded-[18px] bg-slate-300">
+          <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+        </div>
       ) : (
-        <div className="flex h-full items-center justify-center bg-slate-300">
+        <div className="flex h-full items-center justify-center rounded-[18px] bg-slate-300">
           <svg
             aria-hidden="true"
             viewBox="0 0 24 24"
@@ -140,13 +156,14 @@ function StripeSlotPreview({
 }
 
 export function StickerEditor({
-  stickerId,
-  status,
-  rejectReason,
-  originalWidth,
-  originalHeight,
-  originalAssetUrl,
-  initialState,
+      stickerId,
+      status,
+      rejectReason,
+      originalWidth,
+      originalHeight,
+      originalAssetUrl,
+      initialState,
+      stripePreviewSlots,
 }: StickerEditorProps) {
   const { t } = useI18n();
   const router = useRouter();
@@ -382,15 +399,15 @@ export function StickerEditor({
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-[28px] bg-slate-950/95 p-4 text-white shadow-soft">
-              <div className="grid grid-cols-2 gap-3">
-                {Array.from({ length: 8 }, (_, index) => (
+              <div className="grid grid-cols-2 gap-2">
+                {stripePreviewSlots.map((slot, index) => (
                   <StripeSlotPreview
-                    key={index}
-                    imageUrl={originalAssetUrl}
+                    key={slot?.id ?? `empty-${index}`}
+                    imageUrl={slot?.kind === "existing" ? (slot.imageUrl ?? originalAssetUrl) : originalAssetUrl}
                     state={deferredState}
                     originalWidth={originalWidth}
                     originalHeight={originalHeight}
-                    filled={index === 0}
+                    mode={slot?.kind ?? "empty"}
                   />
                 ))}
               </div>

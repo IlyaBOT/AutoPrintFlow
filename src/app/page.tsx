@@ -15,18 +15,19 @@ export default async function HomePage() {
   const t = (key: string, values?: Record<string, string | number | null | undefined>) =>
     translate(messages, key, values);
   const ctaHref = user ? "/editor/new" : "/login";
+  const isRu = locale === "ru";
 
   return (
     <main className="page-shell space-y-10">
       <section className="glass-panel overflow-hidden rounded-[40px] p-6 sm:p-8 lg:p-10">
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_420px] lg:items-center">
+        <div className={`grid gap-10 lg:items-center ${isRu ? "lg:grid-cols-[minmax(0,1.1fr)_480px]" : "lg:grid-cols-[minmax(0,1.1fr)_420px]"}`}>
           <div className="space-y-7">
             <div className="section-kicker">{t("home.kicker")}</div>
             <div className="space-y-4">
-              <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
+              <h1 className={`max-w-3xl font-semibold tracking-tight text-slate-950 ${isRu ? "text-4xl leading-[1.02] sm:text-[4.4rem] lg:text-[4.8rem]" : "text-4xl sm:text-5xl lg:text-6xl"}`}>
                 {t("home.title")}
               </h1>
-              <p className="max-w-2xl text-lg leading-8 text-slate-600">
+              <p className={`max-w-2xl text-slate-600 ${isRu ? "text-base leading-7 sm:text-[1.02rem]" : "text-lg leading-8"}`}>
                 {t("home.description")}
               </p>
             </div>
@@ -48,24 +49,24 @@ export default async function HomePage() {
           <div className="rounded-[36px] border border-white/60 bg-hero-glow p-5 shadow-panel">
             <div className="grid grid-cols-2 gap-4">
               <div className="glass-panel rounded-[28px] p-4">
-                <NerdIcon className="text-lg text-sky-700" name="upload" />
-                <div className="mt-5 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">{t("home.featureUploadTitle")}</div>
-                <p className="mt-2 text-sm text-slate-700">{t("home.featureUploadDescription")}</p>
+                <NerdIcon className="text-4xl font-black leading-none text-sky-700" name="upload" />
+                <div className={`mt-5 font-semibold uppercase tracking-[0.2em] text-slate-500 ${isRu ? "text-[0.82rem]" : "text-sm"}`}>{t("home.featureUploadTitle")}</div>
+                <p className={`mt-2 text-slate-700 ${isRu ? "text-[0.94rem] leading-7" : "text-sm"}`}>{t("home.featureUploadDescription")}</p>
               </div>
               <div className="glass-panel rounded-[28px] p-4">
-                <NerdIcon className="text-lg text-sky-700" name="sticker" />
-                <div className="mt-5 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">{t("home.featureEditTitle")}</div>
-                <p className="mt-2 text-sm text-slate-700">{t("home.featureEditDescription")}</p>
+                <NerdIcon className="text-4xl font-black leading-none text-sky-700" name="edit" />
+                <div className={`mt-5 font-semibold uppercase tracking-[0.2em] text-slate-500 ${isRu ? "text-[0.82rem]" : "text-sm"}`}>{t("home.featureEditTitle")}</div>
+                <p className={`mt-2 text-slate-700 ${isRu ? "text-[0.94rem] leading-7" : "text-sm"}`}>{t("home.featureEditDescription")}</p>
               </div>
               <div className="glass-panel rounded-[28px] p-4">
-                <NerdIcon className="text-lg text-sky-700" name="shield" />
-                <div className="mt-5 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">{t("home.featureModerateTitle")}</div>
-                <p className="mt-2 text-sm text-slate-700">{t("home.featureModerateDescription")}</p>
+                <NerdIcon className="text-4xl font-black leading-none text-sky-700" name="shield" />
+                <div className={`mt-5 font-semibold uppercase tracking-[0.2em] text-slate-500 ${isRu ? "text-[0.82rem]" : "text-sm"}`}>{t("home.featureModerateTitle")}</div>
+                <p className={`mt-2 text-slate-700 ${isRu ? "text-[0.94rem] leading-7" : "text-sm"}`}>{t("home.featureModerateDescription")}</p>
               </div>
               <div className="glass-panel rounded-[28px] p-4">
-                <NerdIcon className="text-lg text-sky-700" name="layers" />
-                <div className="mt-5 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">{t("home.featureExportTitle")}</div>
-                <p className="mt-2 text-sm text-slate-700">{t("home.featureExportDescription")}</p>
+                <NerdIcon className="text-4xl font-black leading-none text-sky-700" name="layers" />
+                <div className={`mt-5 font-semibold uppercase tracking-[0.2em] text-slate-500 ${isRu ? "text-[0.82rem]" : "text-sm"}`}>{t("home.featureExportTitle")}</div>
+                <p className={`mt-2 text-slate-700 ${isRu ? "text-[0.94rem] leading-7" : "text-sm"}`}>{t("home.featureExportDescription")}</p>
               </div>
             </div>
           </div>

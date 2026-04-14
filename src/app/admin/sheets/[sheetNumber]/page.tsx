@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { StripeCard } from "@/components/admin/stripe-card";
+import { SheetPrintButton } from "@/components/admin/sheet-print-button";
 import { Button } from "@/components/ui/button";
 import { requireAdminPage } from "@/lib/auth/guards";
 import { getMessages, translate } from "@/lib/i18n";
@@ -51,9 +52,12 @@ export default async function AdminSheetDetailsPage({
               })}
             </p>
           </div>
-          <Button asChild variant="secondary">
-            <a href={`/api/admin/queue/sheet/${sheet.index}?download=1`}>{t("admin.sheetDetailsDownload")}</a>
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <SheetPrintButton sheetIndex={sheet.index} />
+            <Button asChild variant="secondary">
+              <a href={`/api/admin/queue/sheet/${sheet.index}?download=1`}>{t("admin.sheetDetailsDownload")}</a>
+            </Button>
+          </div>
         </div>
         <div className="mt-6 overflow-hidden rounded-[30px] border border-white/60 bg-white/80 p-4">
           <img

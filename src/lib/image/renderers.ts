@@ -114,14 +114,14 @@ export async function renderAndStoreStickerAssets(params: {
   };
 }
 
-const STRIPE_CARD_SIZE = 520;
+const STRIPE_CARD_SIZE = 528;
 const STRIPE_CARD_RADIUS = 34;
-const STRIPE_CARD_GAP_X = 40;
-const STRIPE_CARD_GAP_Y = 56;
-const STRIPE_CARD_MARGIN_X = 20;
-const STRIPE_CARD_MARGIN_Y = 18;
+const STRIPE_CARD_GAP_X = 8;
+const STRIPE_CARD_GAP_Y = 8;
+const STRIPE_CARD_MARGIN_X = 28;
+const STRIPE_CARD_MARGIN_Y = 24;
 const STRIPE_CARD_SHADOW_OFFSET = { x: 6, y: 10 };
-const STRIPE_STICKER_INSET = Math.round((STRIPE_CARD_SIZE - STICKER_SIZE_PX) / 2);
+const STRIPE_STICKER_INSET = 16;
 const STRIPE_FOOTER_HEIGHT = 110;
 const STRIPE_HORIZON_Y = 1270;
 
@@ -163,15 +163,16 @@ function buildStripeOverlaySvg(params: {
   footerText: string;
   footerFontSizePt: number;
 }) {
+  const innerSlotSize = STICKER_SIZE_PX;
   const emptySlotIcon = (position: { x: number; y: number }) => `
-    <g transform="translate(${position.x + 154} ${position.y + 154})">
-      <rect x="0" y="0" width="212" height="212" rx="28" fill="#b9bcc3" />
-      <g transform="translate(46 46)" stroke="#000000" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none">
-        <rect x="6" y="16" width="108" height="88" rx="14" />
-        <circle cx="40" cy="42" r="9" fill="#000000" stroke="none" />
-        <path d="M20 86l22-22a6 6 0 0 1 8 0l18 18" />
-        <path d="M64 82l10-10a6 6 0 0 1 8 0l18 18" />
-        <path d="M8 8l104 104" />
+    <g>
+      <rect x="${position.x + STRIPE_STICKER_INSET}" y="${position.y + STRIPE_STICKER_INSET}" width="${innerSlotSize}" height="${innerSlotSize}" rx="26" fill="#b9bcc3" />
+      <g transform="translate(${position.x + 176} ${position.y + 176})" stroke="#000000" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <rect x="6" y="16" width="164" height="132" rx="18" />
+        <circle cx="60" cy="56" r="12" fill="#000000" stroke="none" />
+        <path d="M28 116l34-34a8 8 0 0 1 11 0l28 28" />
+        <path d="M97 110l16-16a8 8 0 0 1 11 0l27 27" />
+        <path d="M10 10l156 156" />
       </g>
     </g>
   `;
@@ -179,11 +180,10 @@ function buildStripeOverlaySvg(params: {
   const cards = STRIPE_CARD_POSITIONS
     .map((position, index) => {
       const filled = params.occupiedSlots[index];
-      const fill = filled ? "rgba(255,255,255,0.98)" : "#b9bcc3";
       return `
         <g>
           <rect x="${position.x + STRIPE_CARD_SHADOW_OFFSET.x}" y="${position.y + STRIPE_CARD_SHADOW_OFFSET.y}" width="${STRIPE_CARD_SIZE}" height="${STRIPE_CARD_SIZE}" rx="${STRIPE_CARD_RADIUS}" fill="rgba(8, 14, 24, 0.18)" />
-          <rect x="${position.x}" y="${position.y}" width="${STRIPE_CARD_SIZE}" height="${STRIPE_CARD_SIZE}" rx="${STRIPE_CARD_RADIUS}" fill="${fill}" stroke="rgba(255,255,255,0.88)" stroke-width="2" />
+          <rect x="${position.x}" y="${position.y}" width="${STRIPE_CARD_SIZE}" height="${STRIPE_CARD_SIZE}" rx="${STRIPE_CARD_RADIUS}" fill="rgba(255,255,255,0.995)" stroke="rgba(255,255,255,0.92)" stroke-width="2" />
           ${filled ? "" : emptySlotIcon(position)}
         </g>
       `;
