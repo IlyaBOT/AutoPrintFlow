@@ -76,6 +76,8 @@ export default async function StickerEditorPage({
     slot
       ? slot.id === sticker.id
         ? { kind: "current" as const, id: slot.id }
+        : slot.userId !== user.id
+          ? { kind: "locked" as const }
         : {
             kind: "existing" as const,
             id: slot.id,

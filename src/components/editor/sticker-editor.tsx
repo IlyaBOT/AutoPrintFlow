@@ -43,6 +43,9 @@ type StickerEditorProps = {
         id: string;
         imageUrl: string | null;
       }
+    | {
+        kind: "locked";
+      }
     | null
   >;
 };
@@ -111,32 +114,42 @@ function StripeSlotPreview({
   originalHeight,
   mode,
 }: {
-  imageUrl: string;
+  imageUrl: string | null;
   state: StickerEditorState;
   originalWidth: number;
   originalHeight: number;
-  mode: "current" | "existing" | "empty";
+  mode: "current" | "existing" | "locked" | "empty";
 }) {
   return (
-    <div className="relative aspect-square overflow-hidden rounded-[22px] bg-white p-4 shadow-sm">
+    <div className="relative aspect-square overflow-hidden rounded-[22px] border border-black/5 bg-white/90 p-4 shadow-sm dark:border-white/10 dark:bg-slate-900/85 dark:shadow-none">
       {mode === "current" ? (
         <PreviewScene
-          imageUrl={imageUrl}
+          imageUrl={imageUrl ?? ""}
           state={state}
           originalWidth={originalWidth}
           originalHeight={originalHeight}
-          className="rounded-[18px]"
+          className="rounded-[18px] ring-1 ring-black/10 dark:ring-white/10"
         />
       ) : mode === "existing" ? (
-        <div className="h-full overflow-hidden rounded-[18px] bg-slate-300">
-          <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+        imageUrl ? (
+          <div className="h-full overflow-hidden rounded-[18px] bg-slate-300 ring-1 ring-black/5 dark:bg-slate-800 dark:ring-white/10">
+            <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+          </div>
+        ) : (
+          <div className="flex h-full items-center justify-center rounded-[18px] bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+            <NerdIcon className="text-5xl" name="image" />
+          </div>
+        )
+      ) : mode === "locked" ? (
+        <div className="flex h-full items-center justify-center rounded-[18px] bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+          <NerdIcon className="text-6xl" name="imageLockOutline" />
         </div>
       ) : (
-        <div className="flex h-full items-center justify-center rounded-[18px] bg-slate-300">
+        <div className="flex h-full items-center justify-center rounded-[18px] bg-slate-300 dark:bg-slate-800">
           <svg
             aria-hidden="true"
             viewBox="0 0 24 24"
-            className="h-16 w-16 text-black"
+            className="h-16 w-16 text-black dark:text-slate-200"
             fill="none"
             stroke="currentColor"
             strokeWidth="1.8"
@@ -392,18 +405,24 @@ export function StickerEditor({
           </CardContent>
         </Card>
 
-        <Card className="rounded-[36px] bg-[linear-gradient(180deg,rgba(210,230,255,0.84),rgba(170,207,255,0.78))]">
+        <Card className="rounded-[36px] border-sky-100/80 bg-[linear-gradient(180deg,rgba(210,230,255,0.84),rgba(170,207,255,0.78))] dark:border-slate-700/80 dark:bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(30,41,59,0.92))]">
           <CardHeader>
             <CardTitle>{t("editor.stripePreviewTitle")}</CardTitle>
             <CardDescription>{t("editor.stripePreviewDescription")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-[28px] bg-slate-950/95 p-4 text-white shadow-soft">
+            <div className="rounded-[28px] border border-black/5 bg-slate-950/95 p-4 text-white shadow-soft dark:border-white/10 dark:bg-slate-950/70">
               <div className="grid grid-cols-2 gap-2">
                 {stripePreviewSlots.map((slot, index) => (
                   <StripeSlotPreview
-                    key={slot?.id ?? `empty-${index}`}
-                    imageUrl={slot?.kind === "existing" ? (slot.imageUrl ?? originalAssetUrl) : originalAssetUrl}
+                    key={slot && "id" in slot ? slot.id : `${slot?.kind ?? "empty"}-${index}`}
+                    imageUrl={
+                      slot?.kind === "existing"
+                        ? slot.imageUrl
+                        : slot?.kind === "current"
+                          ? originalAssetUrl
+                          : null
+                    }
                     state={deferredState}
                     originalWidth={originalWidth}
                     originalHeight={originalHeight}
@@ -412,7 +431,7 @@ export function StickerEditor({
                 ))}
               </div>
             </div>
-            <div className="rounded-2xl bg-white/70 px-4 py-3 text-sm text-slate-600">
+            <div className="rounded-2xl border border-white/40 bg-white/70 px-4 py-3 text-sm text-slate-600 dark:border-white/10 dark:bg-slate-950/60 dark:text-slate-300">
               {t("editor.stripePreviewNote")}
             </div>
           </CardContent>

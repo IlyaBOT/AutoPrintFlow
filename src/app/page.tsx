@@ -24,7 +24,7 @@ export default async function HomePage() {
           <div className="space-y-7">
             <div className="section-kicker">{t("home.kicker")}</div>
             <div className="space-y-4">
-              <h1 className={`max-w-3xl font-semibold tracking-tight text-slate-950 ${isRu ? "text-4xl leading-[1.02] sm:text-[4.4rem] lg:text-[4.8rem]" : "text-4xl sm:text-5xl lg:text-6xl"}`}>
+              <h1 className={`max-w-3xl font-semibold tracking-tight text-slate-950 ${isRu ? "text-4xl leading-[1.02] sm:text-[4.4rem] lg:text-[58px]" : "text-4xl sm:text-5xl lg:text-6xl"}`}>
                 {t("home.title")}
               </h1>
               <p className={`max-w-2xl text-slate-600 ${isRu ? "text-base leading-7 sm:text-[1.02rem]" : "text-lg leading-8"}`}>
