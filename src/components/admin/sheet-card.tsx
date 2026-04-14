@@ -34,7 +34,7 @@ export function SheetCard({ sheet }: { sheet: QueueSheet }) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="overflow-hidden rounded-[24px] border border-white/60 bg-white/80 p-3">
+        <div className="mx-auto w-full overflow-hidden rounded-[24px] border border-white/60 bg-white/80 p-3 md:max-w-[70%]">
           <img
             src={`/api/admin/queue/sheet/${sheet.index}`}
             alt={t("admin.sheetAlt", { index: sheet.index })}

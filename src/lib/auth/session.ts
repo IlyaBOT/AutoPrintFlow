@@ -77,6 +77,7 @@ async function loadSessionFromCookie() {
           name: true,
           email: true,
           role: true,
+          isBanned: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -84,7 +85,7 @@ async function loadSessionFromCookie() {
     },
   });
 
-  if (!session || session.expiresAt < new Date()) {
+  if (!session || session.expiresAt < new Date() || session.user.isBanned) {
     return null;
   }
 

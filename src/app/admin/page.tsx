@@ -1,5 +1,6 @@
 import type { StickerStatus } from "@prisma/client";
 
+import { AdminTabsNav } from "@/components/admin/admin-tabs-nav";
 import { ModerationActions } from "@/components/admin/moderation-actions";
 import { SheetCard } from "@/components/admin/sheet-card";
 import { StatusBadge } from "@/components/status-badge";
@@ -126,6 +127,22 @@ export default async function AdminPage() {
 
   return (
     <main className="page-shell space-y-8">
+      <section className="space-y-4">
+        <div>
+          <div className="section-kicker">{t("admin.portalKicker")}</div>
+          <h1 className="mt-2 text-3xl font-semibold text-slate-950">{t("admin.printQueueHeading")}</h1>
+          <p className="mt-2 text-slate-600">{t("admin.printQueueDescription")}</p>
+        </div>
+        <AdminTabsNav
+          active="/admin"
+          tabs={[
+            { href: "/admin/account", label: t("admin.accountTab") },
+            { href: "/admin", label: t("admin.printQueueTab") },
+            { href: "/admin/system-settings", label: t("admin.systemSettingsTab") },
+          ]}
+        />
+      </section>
+
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <StatsCard label={t("admin.statsSubmittedLabel")} value={stats.submittedCount} helper={t("admin.statsSubmittedHelper")} />
         <StatsCard label={t("admin.statsApprovedLabel")} value={stats.approvedWaitingCount} helper={t("admin.statsApprovedHelper")} />

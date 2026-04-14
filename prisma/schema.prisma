@@ -20,12 +20,31 @@ enum StickerStatus {
   PRINTED
 }
 
+enum PrintProductType {
+  STICKER_STRIPE
+  LASER_MONO
+  PHOTO_A4
+  DISC_PRINT
+  BUSINESS_CARD
+  CUSTOM
+}
+
+enum ProductionUnit {
+  SHEET
+  DISK
+  CARD
+  ITEM
+}
+
 model User {
   id           String    @id @default(cuid())
   name         String
   email        String    @unique
   passwordHash String
   role         Role      @default(USER)
+  isBanned     Boolean   @default(false)
+  bannedAt     DateTime?
+  banReason    String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   sessions     Session[]
@@ -69,4 +88,48 @@ model Sticker {
   @@index([status, approvedAt])
   @@index([status, submittedAt])
   @@index([printedAt])
+}
+
+model SystemSettings {
+  id                    Int      @id @default(1)
+  instanceName          String   @default("AutoPrint Flow")
+  instanceIconFilePath  String?
+  stripeBackgroundPath  String?
+  stripeFooterText      String   @default("Printed in \"AutoPrint Flow. {year}\"")
+  stripeFooterFontSizePt Int     @default(18)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model PrintProfile {
+  id               Int              @id @default(autoincrement())
+  slug             String           @unique
+  name             String
+  description      String?
+  type             PrintProductType
+  productionUnit   ProductionUnit
+  acceptsMaterials Boolean          @default(false)
+  isActive         Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  materials        PrintMaterial[]
+
+  @@index([type])
+}
+
+model PrintMaterial {
+  id          Int          @id @default(autoincrement())
+  profileId   Int
+  name        String
+  description String?
+  weightGsm   Int?
+  finish      String?
+  isDefault   Boolean      @default(false)
+  sortOrder   Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  profile     PrintProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, name])
+  @@index([profileId, sortOrder])
 }

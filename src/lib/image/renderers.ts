@@ -5,6 +5,7 @@ import path from "path";
 import sharp from "sharp";
 
 import { STICKER_SIZE_PX, STRIPE_SIZE, SHEET_SIZE } from "@/lib/image/constants";
+import { convertPtToPx, getSystemSettings, resolveStripeFooterText } from "@/lib/system-settings";
 import {
   STORAGE_DIRS,
   buildDeterministicName,
@@ -14,7 +15,7 @@ import {
 } from "@/lib/storage";
 import type { QueueSheet, QueueStripe, StickerEditorState } from "@/types/stickers";
 
-const RENDER_VERSION = "psd-v1";
+const RENDER_VERSION = "settings-v1";
 
 function formatNumber(value: number) {
   return Number(value.toFixed(4));
@@ -131,24 +132,7 @@ const STRIPE_CARD_POSITIONS = Array.from({ length: 4 }, (_, row) =>
   })),
 ).flat();
 
-function buildStripeBackgroundSvg(occupiedSlots: boolean[]) {
-  const cards = STRIPE_CARD_POSITIONS
-    .map((position, index) => {
-      const filled = occupiedSlots[index];
-      const fill = filled ? "rgba(255,255,255,0.98)" : "rgba(255,255,255,0.94)";
-      return `
-        <g>
-          <rect x="${position.x + STRIPE_CARD_SHADOW_OFFSET.x}" y="${position.y + STRIPE_CARD_SHADOW_OFFSET.y}" width="${STRIPE_CARD_SIZE}" height="${STRIPE_CARD_SIZE}" rx="${STRIPE_CARD_RADIUS}" fill="rgba(8, 14, 24, 0.18)" />
-          <rect x="${position.x}" y="${position.y}" width="${STRIPE_CARD_SIZE}" height="${STRIPE_CARD_SIZE}" rx="${STRIPE_CARD_RADIUS}" fill="${fill}" stroke="rgba(255,255,255,0.88)" stroke-width="2" />
-          ${filled ? "" : `<rect x="${position.x + 192}" y="${position.y + 252}" width="136" height="10" rx="5" fill="rgba(74, 104, 156, 0.18)" />
-              <rect x="${position.x + 252}" y="${position.y + 192}" width="10" height="136" rx="5" fill="rgba(74, 104, 156, 0.18)" />`}
-        </g>
-      `;
-    })
-    .join("");
-
-  const footerTop = STRIPE_SIZE.height - STRIPE_FOOTER_HEIGHT;
-
+function buildDefaultStripeBackgroundSvg() {
   return `
     <svg xmlns="http://www.w3.org/2000/svg" width="${STRIPE_SIZE.width}" height="${STRIPE_SIZE.height}" viewBox="0 0 ${STRIPE_SIZE.width} ${STRIPE_SIZE.height}">
       <defs>
@@ -170,10 +154,51 @@ function buildStripeBackgroundSvg(occupiedSlots: boolean[]) {
       <circle cx="300" cy="240" r="90" fill="rgba(255,255,255,0.35)" />
       <circle cx="860" cy="180" r="140" fill="rgba(255,255,255,0.28)" />
       <circle cx="980" cy="260" r="110" fill="rgba(255,255,255,0.22)" />
+    </svg>
+  `;
+}
+
+function buildStripeOverlaySvg(params: {
+  occupiedSlots: boolean[];
+  footerText: string;
+  footerFontSizePt: number;
+}) {
+  const emptySlotIcon = (position: { x: number; y: number }) => `
+    <g transform="translate(${position.x + 154} ${position.y + 154})">
+      <rect x="0" y="0" width="212" height="212" rx="28" fill="#b9bcc3" />
+      <g transform="translate(46 46)" stroke="#000000" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <rect x="6" y="16" width="108" height="88" rx="14" />
+        <circle cx="40" cy="42" r="9" fill="#000000" stroke="none" />
+        <path d="M20 86l22-22a6 6 0 0 1 8 0l18 18" />
+        <path d="M64 82l10-10a6 6 0 0 1 8 0l18 18" />
+        <path d="M8 8l104 104" />
+      </g>
+    </g>
+  `;
+
+  const cards = STRIPE_CARD_POSITIONS
+    .map((position, index) => {
+      const filled = params.occupiedSlots[index];
+      const fill = filled ? "rgba(255,255,255,0.98)" : "#b9bcc3";
+      return `
+        <g>
+          <rect x="${position.x + STRIPE_CARD_SHADOW_OFFSET.x}" y="${position.y + STRIPE_CARD_SHADOW_OFFSET.y}" width="${STRIPE_CARD_SIZE}" height="${STRIPE_CARD_SIZE}" rx="${STRIPE_CARD_RADIUS}" fill="rgba(8, 14, 24, 0.18)" />
+          <rect x="${position.x}" y="${position.y}" width="${STRIPE_CARD_SIZE}" height="${STRIPE_CARD_SIZE}" rx="${STRIPE_CARD_RADIUS}" fill="${fill}" stroke="rgba(255,255,255,0.88)" stroke-width="2" />
+          ${filled ? "" : emptySlotIcon(position)}
+        </g>
+      `;
+    })
+    .join("");
+
+  const footerTop = STRIPE_SIZE.height - STRIPE_FOOTER_HEIGHT;
+  const footerFontSizePx = convertPtToPx(params.footerFontSizePt);
+
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${STRIPE_SIZE.width}" height="${STRIPE_SIZE.height}" viewBox="0 0 ${STRIPE_SIZE.width} ${STRIPE_SIZE.height}">
       ${cards}
       <rect x="0" y="${footerTop}" width="${STRIPE_SIZE.width}" height="${STRIPE_FOOTER_HEIGHT}" fill="#0a0a0a" />
       <rect x="0" y="${footerTop}" width="${STRIPE_SIZE.width}" height="6" fill="rgba(255,255,255,0.08)" />
-      <text x="${STRIPE_SIZE.width / 2}" y="${footerTop + STRIPE_FOOTER_HEIGHT - 26}" text-anchor="middle" fill="rgba(255,255,255,0.9)" font-size="30" font-family="Manrope, Arial, sans-serif">Printed by IB-WorkShop. 2026</text>
+      <text x="${STRIPE_SIZE.width / 2}" y="${footerTop + Math.round(STRIPE_FOOTER_HEIGHT * 0.68)}" text-anchor="middle" fill="rgba(255,255,255,0.94)" font-size="${footerFontSizePx}" font-family="Myriad Pro, Liberation Sans, DejaVu Sans, Arial, sans-serif" font-weight="700">${params.footerText}</text>
     </svg>
   `;
 }
@@ -184,7 +209,27 @@ const STRIPE_CARD_COORDINATES = STRIPE_CARD_POSITIONS.map((position) => ({
 }));
 
 export async function renderStripePng(stripe: QueueStripe) {
-  const background = sharp(Buffer.from(buildStripeBackgroundSvg(stripe.slots.map(Boolean)))).png();
+  const settings = await getSystemSettings();
+  const footerText = resolveStripeFooterText(settings.stripeFooterText);
+  const base =
+    settings.stripeBackgroundPath
+      ? sharp(await readStoredFile(settings.stripeBackgroundPath)).resize(STRIPE_SIZE.width, STRIPE_SIZE.height, {
+          fit: "cover",
+        })
+      : sharp(Buffer.from(buildDefaultStripeBackgroundSvg()));
+  const background = base
+    .composite([
+      {
+        input: Buffer.from(
+          buildStripeOverlaySvg({
+            occupiedSlots: stripe.slots.map(Boolean),
+            footerText,
+            footerFontSizePt: settings.stripeFooterFontSizePt,
+          }),
+        ),
+      },
+    ])
+    .png();
   const composites: sharp.OverlayOptions[] = [];
 
   await Promise.all(
@@ -244,16 +289,25 @@ export async function renderSheetPng(sheet: QueueSheet) {
   return base.composite(composites).png().toBuffer();
 }
 
-function getStripeSeed(stripe: QueueStripe) {
-  return [RENDER_VERSION, stripe.slots.map((slot) => slot?.id ?? "empty").join("-")].join("|");
+async function getStripeSeed(stripe: QueueStripe) {
+  const settings = await getSystemSettings();
+  return [
+    RENDER_VERSION,
+    stripe.slots.map((slot) => slot?.id ?? "empty").join("-"),
+    settings.stripeBackgroundPath ?? "default-bg",
+    settings.stripeFooterText,
+    String(settings.stripeFooterFontSizePt),
+    settings.updatedAt.toISOString(),
+  ].join("|");
 }
 
-function getSheetSeed(sheet: QueueSheet) {
-  return [RENDER_VERSION, sheet.stripes.map((stripe) => getStripeSeed(stripe)).join("|")].join("|");
+async function getSheetSeed(sheet: QueueSheet) {
+  const stripeSeeds = await Promise.all(sheet.stripes.map((stripe) => getStripeSeed(stripe)));
+  return [RENDER_VERSION, stripeSeeds.join("|")].join("|");
 }
 
 export async function getOrCreateStripeFile(stripe: QueueStripe) {
-  const fileName = buildDeterministicName(`stripe-${stripe.index}`, getStripeSeed(stripe), ".png");
+  const fileName = buildDeterministicName(`stripe-${stripe.index}`, await getStripeSeed(stripe), ".png");
   const relativePath = path.posix.join(fileName);
 
   if (!(await fileExists(path.posix.join(STORAGE_DIRS.generatedStripes, relativePath)))) {
@@ -265,7 +319,7 @@ export async function getOrCreateStripeFile(stripe: QueueStripe) {
 }
 
 export async function getOrCreateSheetFile(sheet: QueueSheet) {
-  const fileName = buildDeterministicName(`sheet-${sheet.index}`, getSheetSeed(sheet), ".png");
+  const fileName = buildDeterministicName(`sheet-${sheet.index}`, await getSheetSeed(sheet), ".png");
   const relativePath = path.posix.join(fileName);
 
   if (!(await fileExists(path.posix.join(STORAGE_DIRS.generatedSheets, relativePath)))) {

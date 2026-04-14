@@ -98,14 +98,12 @@ function StripeSlotPreview({
   originalWidth,
   originalHeight,
   filled,
-  emptyLabel,
 }: {
   imageUrl: string;
   state: StickerEditorState;
   originalWidth: number;
   originalHeight: number;
   filled: boolean;
-  emptyLabel: string;
 }) {
   return (
     <div className="relative aspect-square overflow-hidden rounded-[18px] border border-white/70 bg-white/95 shadow-sm">
@@ -118,8 +116,23 @@ function StripeSlotPreview({
           className="rounded-[18px]"
         />
       ) : (
-        <div className="flex h-full items-center justify-center bg-slate-50 text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">
-          {emptyLabel}
+        <div className="flex h-full items-center justify-center bg-slate-300">
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="h-16 w-16 text-black"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="3.5" y="5" width="17" height="14" rx="2.5" />
+            <circle cx="9" cy="10" r="1.4" fill="currentColor" stroke="none" />
+            <path d="M5.5 16l4.2-4.2a1 1 0 0 1 1.4 0L14 14.7" />
+            <path d="M13 13.7l1.2-1.2a1 1 0 0 1 1.4 0l2.9 2.9" />
+            <path d="M4 4l16 16" />
+          </svg>
         </div>
       )}
     </div>
@@ -378,7 +391,6 @@ export function StickerEditor({
                     originalWidth={originalWidth}
                     originalHeight={originalHeight}
                     filled={index === 0}
-                    emptyLabel={t("editor.emptySlot")}
                   />
                 ))}
               </div>

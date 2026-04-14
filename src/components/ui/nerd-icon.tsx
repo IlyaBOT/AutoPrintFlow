@@ -23,6 +23,7 @@ const glyphs = {
   sticker: "⬚",
   sun: "☼",
   upload: "↑",
+  userCircle: "👤",
   zoomIn: "⊕",
   zoomOut: "⊖",
   chevronDown: "▾",

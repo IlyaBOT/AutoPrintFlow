@@ -20,6 +20,10 @@ export async function POST(request: Request) {
       return jsonError(t("api.authInvalidCredentials"), 401);
     }
 
+    if (user.isBanned) {
+      return jsonError(t("api.authBanned"), 403);
+    }
+
     await createUserSession(user.id);
 
     return jsonSuccess({

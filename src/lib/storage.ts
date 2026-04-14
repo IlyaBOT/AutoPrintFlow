@@ -12,6 +12,7 @@ export const STORAGE_DIRS = {
   previews: "previews",
   generatedStripes: "generated-stripes",
   generatedSheets: "generated-sheets",
+  settings: "settings",
 } as const;
 
 export type StorageDirectory = (typeof STORAGE_DIRS)[keyof typeof STORAGE_DIRS];

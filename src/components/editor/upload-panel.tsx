@@ -68,12 +68,12 @@ export function UploadPanel() {
         <form className="space-y-5" onSubmit={handleUpload}>
           <label
             htmlFor="file"
-            className="group flex min-h-72 cursor-pointer flex-col items-center justify-center rounded-[32px] border border-dashed border-sky-300/80 bg-gradient-to-br from-white/75 to-sky-50/70 p-8 text-center transition hover:border-sky-400 hover:bg-white/85"
+            className="group flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-[32px] border border-dashed border-sky-300/80 bg-gradient-to-br from-white/75 to-sky-50/70 p-6 text-center transition hover:border-sky-400 hover:bg-white/85 dark:border-slate-700 dark:from-slate-900 dark:to-slate-900 dark:hover:border-sky-500 dark:hover:from-slate-800 dark:hover:to-slate-800"
           >
-            <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-[22px] bg-slate-950 text-white shadow-lg shadow-slate-900/15">
-              <NerdIcon className="text-2xl" name="upload" />
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-[20px] bg-slate-950 text-white shadow-lg shadow-slate-900/15 dark:bg-sky-400 dark:text-slate-950">
+              <NerdIcon className="text-xl" name="upload" />
             </div>
-            <div className="text-xl font-semibold text-slate-950 dark:text-slate-100">
+            <div className="text-lg font-semibold text-slate-950 dark:text-slate-100">
               {fileName ?? t("upload.dropzoneTitle")}
             </div>
             <p className="mt-3 max-w-md text-sm text-muted-foreground">

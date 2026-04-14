@@ -10,11 +10,11 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-lg shadow-sky-500/25 hover:translate-y-[-1px] hover:bg-sky-500",
+          "bg-primary text-primary-foreground shadow-lg shadow-sky-500/25 hover:translate-y-[-1px] hover:bg-sky-500 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400",
         secondary:
-          "bg-white/70 text-foreground shadow-soft ring-1 ring-inset ring-white/60 hover:bg-white/85 dark:bg-slate-100/12 dark:ring-white/10 dark:hover:bg-slate-100/18",
-        ghost: "bg-transparent text-foreground hover:bg-white/50 dark:hover:bg-slate-100/10",
-        outline: "border border-white/60 bg-white/40 text-foreground hover:bg-white/70 dark:border-white/10 dark:bg-slate-100/5 dark:hover:bg-slate-100/12",
+          "bg-white/70 text-foreground shadow-soft ring-1 ring-inset ring-white/60 hover:bg-white/85 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700 dark:hover:bg-slate-700",
+        ghost: "bg-transparent text-foreground hover:bg-white/50 dark:text-slate-200 dark:hover:bg-slate-800/80",
+        outline: "border border-white/60 bg-white/40 text-foreground hover:bg-white/70 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800",
         destructive:
           "bg-destructive text-destructive-foreground shadow-lg shadow-red-500/20 hover:bg-red-600",
       },
