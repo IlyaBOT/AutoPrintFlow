@@ -10,12 +10,15 @@ import {
   STORAGE_DIRS,
   buildDeterministicName,
   fileExists,
+  getMimeTypeFromPath,
   readStoredFile,
   writeStoredFile,
 } from "@/lib/storage";
+import { parseEditorState } from "@/lib/validation";
 import type { QueueSheet, QueueStripe, StickerEditorState } from "@/types/stickers";
 
-const RENDER_VERSION = "settings-v1";
+const RENDER_VERSION = "settings-v2";
+const STICKER_PRINT_BORDER_PX = 8;
 
 function formatNumber(value: number) {
   return Number(value.toFixed(4));
@@ -86,7 +89,22 @@ export async function renderStickerPng(params: {
   state: StickerEditorState;
 }) {
   const svg = buildStickerSvg(params);
-  return sharp(Buffer.from(svg)).png().toBuffer();
+  const stickerBuffer = await sharp(Buffer.from(svg)).png().toBuffer();
+  const innerSize = STICKER_SIZE_PX - STICKER_PRINT_BORDER_PX * 2;
+
+  return sharp(stickerBuffer)
+    .resize(innerSize, innerSize, {
+      fit: "fill",
+    })
+    .extend({
+      top: STICKER_PRINT_BORDER_PX,
+      right: STICKER_PRINT_BORDER_PX,
+      bottom: STICKER_PRINT_BORDER_PX,
+      left: STICKER_PRINT_BORDER_PX,
+      background: "#ffffff",
+    })
+    .png()
+    .toBuffer();
 }
 
 export async function createPreviewPng(finalStickerBuffer: Buffer) {
@@ -243,11 +261,52 @@ export async function renderStripePng(stripe: QueueStripe) {
 
   await Promise.all(
     stripe.slots.map(async (slot, index) => {
-      if (!slot?.finalFilePath) {
+      if (!slot) {
         return;
       }
 
-      const stickerBuffer = await readStoredFile(slot.finalFilePath);
+      let stickerBuffer: Buffer;
+
+      try {
+        if (
+          !slot.originalFilePath ||
+          !slot.originalWidth ||
+          !slot.originalHeight ||
+          typeof slot.editorStateJson === "undefined"
+        ) {
+          throw new Error("Missing source sticker metadata.");
+        }
+
+        stickerBuffer = await renderStickerPng({
+          sourceBuffer: await readStoredFile(slot.originalFilePath),
+          mimeType: getMimeTypeFromPath(slot.originalFilePath),
+          originalWidth: slot.originalWidth,
+          originalHeight: slot.originalHeight,
+          state: parseEditorState(slot.editorStateJson),
+        });
+      } catch {
+        if (!slot.finalFilePath) {
+          return;
+        }
+
+        const fallbackSticker = await readStoredFile(slot.finalFilePath);
+        const innerSize = STICKER_SIZE_PX - STICKER_PRINT_BORDER_PX * 2;
+
+        stickerBuffer = await sharp(fallbackSticker)
+          .resize(innerSize, innerSize, {
+            fit: "fill",
+          })
+          .extend({
+            top: STICKER_PRINT_BORDER_PX,
+            right: STICKER_PRINT_BORDER_PX,
+            bottom: STICKER_PRINT_BORDER_PX,
+            left: STICKER_PRINT_BORDER_PX,
+            background: "#ffffff",
+          })
+          .png()
+          .toBuffer();
+      }
+
       composites.push({
         input: stickerBuffer,
         left: STRIPE_CARD_COORDINATES[index].left,
@@ -302,7 +361,7 @@ async function getStripeSeed(stripe: QueueStripe) {
   const settings = await getSystemSettings();
   return [
     RENDER_VERSION,
-    stripe.slots.map((slot) => slot?.id ?? "empty").join("-"),
+    stripe.slots.map((slot) => `${slot?.id ?? "empty"}:${slot?.updatedAt?.toISOString() ?? "none"}`).join("-"),
     settings.stripeBackgroundPath ?? "default-bg",
     settings.stripeFooterText,
     String(settings.stripeFooterFontSizePt),

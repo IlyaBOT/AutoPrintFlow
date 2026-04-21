@@ -12,10 +12,15 @@ export type StickerAssetVariant = "original" | "preview" | "final";
 
 export type QueueStickerSummary = {
   id: string;
+  updatedAt?: Date;
   createdAt: Date;
   approvedAt: Date | null;
   submittedAt: Date | null;
   printedAt: Date | null;
+  originalFilePath?: string;
+  originalWidth?: number;
+  originalHeight?: number;
+  editorStateJson?: unknown;
   finalFilePath: string | null;
   previewFilePath: string | null;
   status: StickerStatus;
