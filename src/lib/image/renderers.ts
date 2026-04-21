@@ -17,8 +17,9 @@ import {
 import { parseEditorState } from "@/lib/validation";
 import type { QueueSheet, QueueStripe, StickerEditorState } from "@/types/stickers";
 
-const RENDER_VERSION = "settings-v2";
+const RENDER_VERSION = "settings-v3";
 const STICKER_PRINT_BORDER_PX = 8;
+const STICKER_CORNER_RADIUS_PX = 8;
 
 function formatNumber(value: number) {
   return Number(value.toFixed(4));
@@ -43,6 +44,26 @@ export function getDefaultEditorState(originalWidth: number, originalHeight: num
     scaleY: fitScale,
     rotation: 0,
   };
+}
+
+function buildRoundedRectMaskSvg(width: number, height: number, radius: number) {
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <rect x="0" y="0" width="${width}" height="${height}" rx="${radius}" ry="${radius}" fill="#ffffff" />
+    </svg>
+  `;
+}
+
+async function applyRoundedStickerMask(buffer: Buffer) {
+  return sharp(buffer)
+    .composite([
+      {
+        input: Buffer.from(buildRoundedRectMaskSvg(STICKER_SIZE_PX, STICKER_SIZE_PX, STICKER_CORNER_RADIUS_PX)),
+        blend: "dest-in",
+      },
+    ])
+    .png()
+    .toBuffer();
 }
 
 function buildStickerSvg(params: {
@@ -91,8 +112,10 @@ export async function renderStickerPng(params: {
   const svg = buildStickerSvg(params);
   const stickerBuffer = await sharp(Buffer.from(svg)).png().toBuffer();
   const innerSize = STICKER_SIZE_PX - STICKER_PRINT_BORDER_PX * 2;
-
-  return sharp(stickerBuffer)
+  const filledSticker = await sharp(stickerBuffer)
+    .flatten({
+      background: "#ffffff",
+    })
     .resize(innerSize, innerSize, {
       fit: "fill",
     })
@@ -105,6 +128,8 @@ export async function renderStickerPng(params: {
     })
     .png()
     .toBuffer();
+
+  return applyRoundedStickerMask(filledSticker);
 }
 
 export async function createPreviewPng(finalStickerBuffer: Buffer) {
@@ -244,20 +269,17 @@ export async function renderStripePng(stripe: QueueStripe) {
           fit: "cover",
         })
       : sharp(Buffer.from(buildDefaultStripeBackgroundSvg()));
-  const background = base
-    .composite([
-      {
-        input: Buffer.from(
-          buildStripeOverlaySvg({
-            occupiedSlots: stripe.slots.map(Boolean),
-            footerText,
-            footerFontSizePt: settings.stripeFooterFontSizePt,
-          }),
-        ),
-      },
-    ])
-    .png();
-  const composites: sharp.OverlayOptions[] = [];
+  const composites: sharp.OverlayOptions[] = [
+    {
+      input: Buffer.from(
+        buildStripeOverlaySvg({
+          occupiedSlots: stripe.slots.map(Boolean),
+          footerText,
+          footerFontSizePt: settings.stripeFooterFontSizePt,
+        }),
+      ),
+    },
+  ];
 
   await Promise.all(
     stripe.slots.map(async (slot, index) => {
@@ -292,7 +314,10 @@ export async function renderStripePng(stripe: QueueStripe) {
         const fallbackSticker = await readStoredFile(slot.finalFilePath);
         const innerSize = STICKER_SIZE_PX - STICKER_PRINT_BORDER_PX * 2;
 
-        stickerBuffer = await sharp(fallbackSticker)
+        const filledSticker = await sharp(fallbackSticker)
+          .flatten({
+            background: "#ffffff",
+          })
           .resize(innerSize, innerSize, {
             fit: "fill",
           })
@@ -305,6 +330,8 @@ export async function renderStripePng(stripe: QueueStripe) {
           })
           .png()
           .toBuffer();
+
+        stickerBuffer = await applyRoundedStickerMask(filledSticker);
       }
 
       composites.push({
@@ -315,7 +342,7 @@ export async function renderStripePng(stripe: QueueStripe) {
     }),
   );
 
-  return background.composite(composites).png().toBuffer();
+  return base.composite(composites).png().toBuffer();
 }
 
 function buildSheetSvg() {
