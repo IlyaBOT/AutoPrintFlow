@@ -32,7 +32,7 @@ export async function PATCH(request: Request) {
       data: { passwordHash: await hashPassword(payload.newPassword) },
     });
     await destroyUserSessions(user.id);
-    await createUserSession(user.id);
+    await createUserSession(user.id, request);
 
     return jsonSuccess({ message: t("account.passwordUpdated") });
   } catch (error) {

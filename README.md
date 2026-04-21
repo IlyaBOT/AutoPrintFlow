@@ -197,6 +197,11 @@ TURNSTILE_SITE_KEY=your-site-key
 TURNSTILE_SECRET_KEY=your-secret-key
 ```
 
+Cookie behavior:
+
+- if you access the app directly over LAN `http://SERVER_IP:3000`, keep `APP_ORIGIN` empty or set it to the same `http://...` origin
+- after you put the app behind HTTPS reverse proxy, set `APP_ORIGIN=https://your-domain` so session cookies are issued as `Secure`
+
 Then start it in the background:
 
 ```bash

@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { destroyCurrentSession } from "@/lib/auth/session";
 
 async function handleLogout(request: Request) {
-  await destroyCurrentSession();
+  await destroyCurrentSession(request);
   revalidatePath("/", "layout");
   return NextResponse.redirect(new URL("/", request.url), { status: 303 });
 }

@@ -43,7 +43,7 @@ export async function POST(request: Request) {
       },
     });
 
-    await createUserSession(user.id);
+    await createUserSession(user.id, request);
 
     return jsonSuccess({
       success: true,

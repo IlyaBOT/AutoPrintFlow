@@ -27,7 +27,7 @@ export async function DELETE(request: Request) {
       return jsonError(t("account.invalidPassword"), 403);
     }
 
-    await destroyCurrentSession();
+    await destroyCurrentSession(request);
     await deleteUserWithContent(user.id);
 
     return jsonSuccess({ message: t("account.accountDeleted"), redirectTo: "/register" });

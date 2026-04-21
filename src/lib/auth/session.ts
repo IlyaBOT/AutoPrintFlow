@@ -23,6 +23,29 @@ function getSessionExpiry() {
   return new Date(Date.now() + SESSION_DURATION_DAYS * 24 * 60 * 60 * 1000);
 }
 
+function shouldUseSecureCookies(request?: Request) {
+  const forwardedProto = request?.headers.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase();
+
+  if (forwardedProto === "https") {
+    return true;
+  }
+
+  if (forwardedProto === "http") {
+    return false;
+  }
+
+  if (request) {
+    try {
+      return new URL(request.url).protocol === "https:";
+    } catch {
+      return false;
+    }
+  }
+
+  const appOrigin = getEnv().APP_ORIGIN?.trim().toLowerCase();
+  return appOrigin?.startsWith("https://") ?? false;
+}
+
 export function hashSessionToken(token: string) {
   const secret = getEnv().SESSION_SECRET;
   return crypto.createHash("sha256").update(`${secret}:${token}`).digest("hex");
@@ -32,7 +55,7 @@ export function generateSessionToken() {
   return crypto.randomBytes(32).toString("hex");
 }
 
-export async function createUserSession(userId: string) {
+export async function createUserSession(userId: string, request?: Request) {
   const token = generateSessionToken();
   const tokenHash = hashSessionToken(token);
   const expiresAt = getSessionExpiry();
@@ -52,7 +75,7 @@ export async function createUserSession(userId: string) {
     value: token,
     httpOnly: true,
     sameSite: "lax",
-    secure: getEnv().NODE_ENV === "production",
+    secure: shouldUseSecureCookies(request),
     path: "/",
     expires: expiresAt,
   });
@@ -112,7 +135,7 @@ export async function getCurrentUser() {
   return session?.user ?? null;
 }
 
-export async function destroyCurrentSession() {
+export async function destroyCurrentSession(request?: Request) {
   const cookieStore = await cookies();
   const rawToken = cookieStore.get(getEnv().SESSION_COOKIE_NAME)?.value;
 
@@ -129,7 +152,7 @@ export async function destroyCurrentSession() {
     value: "",
     httpOnly: true,
     sameSite: "lax",
-    secure: getEnv().NODE_ENV === "production",
+    secure: shouldUseSecureCookies(request),
     path: "/",
     maxAge: 0,
   });

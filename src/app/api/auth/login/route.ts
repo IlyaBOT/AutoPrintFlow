@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       return jsonError(t("api.authBanned"), 403);
     }
 
-    await createUserSession(user.id);
+    await createUserSession(user.id, request);
 
     return jsonSuccess({
       success: true,
