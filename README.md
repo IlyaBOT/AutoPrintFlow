@@ -77,6 +77,8 @@ Required variables:
 - `ADMIN_PASSWORD`
 - `NODE_ENV`
 
+For `docker compose`, the container forces `NODE_ENV=production`. Keep `NODE_ENV=development` only for local `npm run dev`.
+
 Default seeded admin credentials:
 
 - Email: `admin@autoprintflow.local`
@@ -157,12 +159,66 @@ What happens on container startup:
 - the app waits for PostgreSQL
 - Prisma migrations are applied
 - the admin seed runs
-- the web server starts on port `3000`
+- the web server starts in the container on port `3000`
+- Docker publishes the app on `${APP_HOST_PORT}` which defaults to `3001`
 
 Named volumes:
 
 - `postgres-data`
 - `app-storage`
+
+## Parallel local/server deployment
+
+This stack is designed to run alongside other Docker projects.
+
+- PostgreSQL is only exposed inside the Docker network and is not published on the host by default.
+- The web app is published on `APP_HOST_PORT`, which defaults to `3001`.
+- Set `COMPOSE_PROJECT_NAME` to keep container, network, and volume names isolated and predictable on a server.
+
+Example `.env` values for a server reachable on the LAN:
+
+```env
+COMPOSE_PROJECT_NAME=autoprintflow
+APP_BIND_IP=0.0.0.0
+APP_HOST_PORT=3001
+DATABASE_URL=postgresql://postgres:postgres@postgres:5432/autoprintflow?schema=public
+```
+
+Then start it in the background:
+
+```bash
+docker compose up -d --build
+```
+
+LAN access:
+
+```text
+http://SERVER_LAN_IP:3001
+```
+
+If you later put Nginx in front of the app, proxy to the local app port:
+
+```nginx
+server {
+    listen 80;
+    server_name example.com;
+
+    client_max_body_size 25m;
+
+    location / {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+```
+
+If you want the app reachable only through Nginx, set `APP_BIND_IP=127.0.0.1` and restart the stack.
 
 ## Authentication architecture
 
