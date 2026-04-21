@@ -17,8 +17,19 @@ export const STORAGE_DIRS = {
 
 export type StorageDirectory = (typeof STORAGE_DIRS)[keyof typeof STORAGE_DIRS];
 
+function ensureStorageRoot(absolutePath: string) {
+  const normalizedRoot = path.resolve(STORAGE_ROOT);
+  const normalizedPath = path.resolve(absolutePath);
+
+  if (normalizedPath !== normalizedRoot && !normalizedPath.startsWith(`${normalizedRoot}${path.sep}`)) {
+    throw new Error("Invalid storage path.");
+  }
+
+  return normalizedPath;
+}
+
 export function resolveStoragePath(relativePath: string) {
-  return path.join(STORAGE_ROOT, relativePath);
+  return ensureStorageRoot(path.resolve(STORAGE_ROOT, relativePath));
 }
 
 export async function ensureStorageDirectories() {

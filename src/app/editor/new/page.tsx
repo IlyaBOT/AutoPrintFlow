@@ -8,9 +8,10 @@ import { requireUserPage } from "@/lib/auth/guards";
 import { getMessages, translate } from "@/lib/i18n";
 import { getLocale } from "@/lib/i18n-server";
 import { prisma } from "@/lib/prisma";
+import { getTurnstileSiteKey } from "@/lib/request-security";
 
 export default async function NewEditorPage() {
-  const [user, locale] = await Promise.all([requireUserPage(), getLocale()]);
+  const [user, locale, turnstileSiteKey] = await Promise.all([requireUserPage(), getLocale(), Promise.resolve(getTurnstileSiteKey())]);
   const messages = getMessages(locale);
   const t = (key: string, values?: Record<string, string | number | null | undefined>) =>
     translate(messages, key, values);
@@ -52,7 +53,7 @@ export default async function NewEditorPage() {
         <StatsCard label={t("editorNew.statsExportSizeLabel")} value="496 px" helper={t("editorNew.statsExportSizeHelper")} />
       </section>
 
-      <UploadPanel />
+      <UploadPanel turnstileSiteKey={turnstileSiteKey} />
 
       <section className="space-y-4">
         <div>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { logoutAction } from "@/app/actions/logout";
 import { getCurrentUser } from "@/lib/auth/session";
 import { ThemeLanguageControls } from "@/components/layout/theme-language-controls";
 import { Button } from "@/components/ui/button";
@@ -47,11 +48,11 @@ export async function SiteHeader() {
               <Button asChild size="sm" variant="secondary">
                 <Link href="/editor/new">{t("header.createLayout")}</Link>
               </Button>
-              <Button asChild size="sm" variant="ghost">
-                <Link href="/logout" prefetch={false}>
+              <form action={logoutAction}>
+                <Button size="sm" type="submit" variant="ghost">
                   {t("header.logout")}
-                </Link>
-              </Button>
+                </Button>
+              </form>
             </>
           ) : (
             <>

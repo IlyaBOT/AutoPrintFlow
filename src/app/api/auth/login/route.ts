@@ -3,6 +3,7 @@ import { verifyPassword } from "@/lib/auth/password";
 import { jsonError, jsonSuccess } from "@/lib/http";
 import { getTranslator } from "@/lib/i18n-server";
 import { prisma } from "@/lib/prisma";
+import { RequestSecurityError, enforceRateLimit, verifyTurnstileToken, getClientIp } from "@/lib/request-security";
 import { loginSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
@@ -11,6 +12,26 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const payload = loginSchema.parse(body);
+    const clientIp = getClientIp(request);
+
+    await enforceRateLimit({
+      key: `auth:login:${clientIp}`,
+      limit: 10,
+      windowMs: 15 * 60 * 1000,
+      errorMessage: t("api.tooManyRequests"),
+    });
+
+    if (payload.website) {
+      return jsonError(t("api.botVerificationFailed"), 400);
+    }
+
+    await verifyTurnstileToken({
+      request,
+      token: payload.turnstileToken,
+      expectedAction: "login",
+      missingTokenMessage: t("api.botVerificationRequired"),
+      invalidTokenMessage: t("api.botVerificationFailed"),
+    });
 
     const user = await prisma.user.findUnique({
       where: { email: payload.email },
@@ -31,6 +52,10 @@ export async function POST(request: Request) {
       redirectTo: user.role === "ADMIN" ? "/admin" : "/dashboard",
     });
   } catch (error) {
+    if (error instanceof RequestSecurityError) {
+      return jsonError(error.message, error.status);
+    }
+
     if (error instanceof Error && error.name === "ZodError") {
       return jsonError(t("api.authInvalidFields"), 422);
     }

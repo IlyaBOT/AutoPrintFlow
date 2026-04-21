@@ -1,14 +1,12 @@
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { destroyCurrentSession } from "@/lib/auth/session";
 
 async function handleLogout(request: Request) {
   await destroyCurrentSession();
-  return NextResponse.redirect(new URL("/", request.url));
-}
-
-export async function GET(request: Request) {
-  return handleLogout(request);
+  revalidatePath("/", "layout");
+  return NextResponse.redirect(new URL("/", request.url), { status: 303 });
 }
 
 export async function POST(request: Request) {

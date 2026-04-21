@@ -6,7 +6,7 @@ import path from "path";
 import { StickerStatus, type Sticker } from "@prisma/client";
 import sharp from "sharp";
 
-import { ACCEPTED_IMAGE_TYPES, MAX_UPLOAD_BYTES, STICKER_SIZE_PX } from "@/lib/image/constants";
+import { ACCEPTED_IMAGE_TYPES, MAX_INPUT_PIXELS, MAX_UPLOAD_BYTES, STICKER_SIZE_PX } from "@/lib/image/constants";
 import { getDefaultEditorState, renderAndStoreStickerAssets } from "@/lib/image/renderers";
 import { getTranslator } from "@/lib/i18n-server";
 import { prisma } from "@/lib/prisma";
@@ -36,7 +36,7 @@ export async function createStickerDraftFromUpload(params: { userId: string; fil
   }
 
   const sourceBuffer = Buffer.from(await params.file.arrayBuffer());
-  const metadata = await sharp(sourceBuffer).metadata();
+  const metadata = await sharp(sourceBuffer, { limitInputPixels: MAX_INPUT_PIXELS }).metadata();
 
   if (!metadata.width || !metadata.height) {
     throw new Error(t("api.imageCouldNotBeProcessed"));

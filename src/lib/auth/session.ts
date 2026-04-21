@@ -135,6 +135,14 @@ export async function destroyCurrentSession() {
   });
 }
 
+export async function destroyUserSessions(userId: string) {
+  await prisma.session.deleteMany({
+    where: {
+      userId,
+    },
+  });
+}
+
 export async function isAuthenticated() {
   return Boolean(await getCurrentUser());
 }

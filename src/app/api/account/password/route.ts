@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { getCurrentUser } from "@/lib/auth/session";
+import { createUserSession, destroyUserSessions, getCurrentUser } from "@/lib/auth/session";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { jsonError, jsonSuccess } from "@/lib/http";
 import { getTranslator } from "@/lib/i18n-server";
@@ -31,6 +31,8 @@ export async function PATCH(request: Request) {
       where: { id: user.id },
       data: { passwordHash: await hashPassword(payload.newPassword) },
     });
+    await destroyUserSessions(user.id);
+    await createUserSession(user.id);
 
     return jsonSuccess({ message: t("account.passwordUpdated") });
   } catch (error) {

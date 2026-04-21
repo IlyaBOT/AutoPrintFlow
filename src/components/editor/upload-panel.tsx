@@ -5,16 +5,20 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { useI18n } from "@/components/providers/i18n-provider";
+import { TurnstileWidget, type TurnstileWidgetHandle } from "@/components/security/turnstile-widget";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { NerdIcon } from "@/components/ui/nerd-icon";
 
-export function UploadPanel() {
+export function UploadPanel({ turnstileSiteKey }: { turnstileSiteKey: string | null }) {
   const { t } = useI18n();
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const turnstileRef = useRef<TurnstileWidgetHandle | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const captchaEnabled = Boolean(turnstileSiteKey);
 
   async function handleUpload(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -27,11 +31,18 @@ export function UploadPanel() {
       return;
     }
 
+    if (captchaEnabled && !turnstileToken) {
+      toast.error(t("security.humanCheckRequired"));
+      return;
+    }
+
     setIsPending(true);
 
     try {
       const uploadData = new FormData();
       uploadData.append("file", file);
+      uploadData.append("website", String(formData.get("website") ?? ""));
+      uploadData.append("turnstileToken", turnstileToken ?? "");
 
       const response = await fetch("/api/stickers/upload", {
         method: "POST",
@@ -51,6 +62,10 @@ export function UploadPanel() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("upload.uploadFailed"));
     } finally {
+      if (captchaEnabled) {
+        setTurnstileToken(null);
+        turnstileRef.current?.reset();
+      }
       setIsPending(false);
     }
   }
@@ -66,6 +81,14 @@ export function UploadPanel() {
       </CardHeader>
       <CardContent>
         <form className="space-y-5" onSubmit={handleUpload}>
+          <input
+            type="text"
+            name="website"
+            tabIndex={-1}
+            autoComplete="off"
+            className="hidden"
+            aria-hidden="true"
+          />
           <label
             htmlFor="file"
             className="group flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-[32px] border border-dashed border-sky-300/80 bg-gradient-to-br from-white/75 to-sky-50/70 p-6 text-center transition hover:border-sky-400 hover:bg-white/85 dark:border-slate-700 dark:from-slate-900 dark:to-slate-900 dark:hover:border-sky-500 dark:hover:from-slate-800 dark:hover:to-slate-800"
@@ -101,6 +124,19 @@ export function UploadPanel() {
               {t("upload.continueToEditor")}
             </Button>
           </div>
+          {captchaEnabled && turnstileSiteKey ? (
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                {t("security.humanCheck")}
+              </div>
+              <TurnstileWidget
+                ref={turnstileRef}
+                action="upload"
+                siteKey={turnstileSiteKey}
+                onTokenChange={setTurnstileToken}
+              />
+            </div>
+          ) : null}
         </form>
       </CardContent>
     </Card>

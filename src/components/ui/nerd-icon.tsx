@@ -51,7 +51,7 @@ export function NerdIcon({
           className="h-[1em] w-[1em]"
           fill="none"
           stroke="currentColor"
-          strokeWidth="1.8"
+          strokeWidth="1.2"
           strokeLinecap="round"
           strokeLinejoin="round"
         >

@@ -152,7 +152,7 @@ function StripeSlotPreview({
             className="h-16 w-16 text-black dark:text-slate-200"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.8"
+            strokeWidth="1.2"
             strokeLinecap="round"
             strokeLinejoin="round"
           >
@@ -178,7 +178,7 @@ export function StickerEditor({
       initialState,
       stripePreviewSlots,
 }: StickerEditorProps) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const router = useRouter();
   const [editorState, setEditorState] = useState<StickerEditorState>(initialState);
   const deferredState = useDeferredValue(editorState);
@@ -226,7 +226,9 @@ export function StickerEditor({
         <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-3">
             <div className="section-kicker">{t("editor.step")}</div>
-            <CardTitle className="text-3xl">{t("editor.title")}</CardTitle>
+            <CardTitle className={cn(locale === "ru" ? "text-2xl sm:text-[1.7rem]" : "text-3xl")}>
+              {t("editor.title")}
+            </CardTitle>
             <CardDescription>{t("editor.description")}</CardDescription>
           </div>
           <div className="flex items-center gap-3">
@@ -240,7 +242,7 @@ export function StickerEditor({
           </div>
         </CardHeader>
         <CardContent className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-          <div className="space-y-4">
+          <div className="mx-auto w-full max-w-[496px] space-y-4">
             <DynamicEditorStage
               imageUrl={originalAssetUrl}
               originalWidth={originalWidth}

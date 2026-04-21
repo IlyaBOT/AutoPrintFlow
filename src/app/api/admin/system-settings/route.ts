@@ -1,11 +1,20 @@
 import path from "path";
 
+import sharp from "sharp";
+
 import { getCurrentUser } from "@/lib/auth/session";
-import { ACCEPTED_IMAGE_TYPES, MAX_UPLOAD_BYTES } from "@/lib/image/constants";
+import { ACCEPTED_IMAGE_TYPES, MAX_INPUT_PIXELS, MAX_UPLOAD_BYTES } from "@/lib/image/constants";
 import { jsonError, jsonSuccess } from "@/lib/http";
 import { getTranslator } from "@/lib/i18n-server";
 import { prisma } from "@/lib/prisma";
 import { STORAGE_DIRS, writeStoredFile } from "@/lib/storage";
+import { z } from "zod";
+
+const settingsSchema = z.object({
+  instanceName: z.string().trim().min(1).max(80),
+  stripeFooterText: z.string().trim().min(1).max(200),
+  stripeFooterFontSizePt: z.number().finite().min(8).max(72),
+});
 
 export async function POST(request: Request) {
   const { t } = await getTranslator();
@@ -17,9 +26,12 @@ export async function POST(request: Request) {
 
   try {
     const formData = await request.formData();
-    const instanceName = String(formData.get("instanceName") ?? "AutoPrint Flow").trim() || "AutoPrint Flow";
-    const stripeFooterText = String(formData.get("stripeFooterText") ?? "").trim() || 'Printed in "AutoPrint Flow. {year}"';
-    const stripeFooterFontSizePt = Number(formData.get("stripeFooterFontSizePt") ?? 18);
+    const parsedSettings = settingsSchema.parse({
+      instanceName: String(formData.get("instanceName") ?? "AutoPrint Flow").trim() || "AutoPrint Flow",
+      stripeFooterText:
+        String(formData.get("stripeFooterText") ?? "").trim() || 'Printed in "AutoPrint Flow. {year}"',
+      stripeFooterFontSizePt: Number(formData.get("stripeFooterFontSizePt") ?? 18),
+    });
     const removeInstanceIcon = String(formData.get("removeInstanceIcon") ?? "") === "1";
     const removeStripeBackground = String(formData.get("removeStripeBackground") ?? "") === "1";
     const instanceIcon = formData.get("instanceIcon");
@@ -41,8 +53,12 @@ export async function POST(request: Request) {
 
       instanceIconFilePath = await writeStoredFile(
         STORAGE_DIRS.settings,
-        path.posix.join(`instance-icon${path.extname(instanceIcon.name || ".png")}`),
-        Buffer.from(await instanceIcon.arrayBuffer()),
+        path.posix.join("instance-icon.png"),
+        await sharp(Buffer.from(await instanceIcon.arrayBuffer()), { limitInputPixels: MAX_INPUT_PIXELS })
+          .rotate()
+          .resize(512, 512, { fit: "inside", withoutEnlargement: true })
+          .png()
+          .toBuffer(),
       );
     }
 
@@ -53,26 +69,32 @@ export async function POST(request: Request) {
 
       stripeBackgroundPath = await writeStoredFile(
         STORAGE_DIRS.settings,
-        path.posix.join(`stripe-background${path.extname(stripeBackground.name || ".png")}`),
-        Buffer.from(await stripeBackground.arrayBuffer()),
+        path.posix.join("stripe-background.png"),
+        await sharp(Buffer.from(await stripeBackground.arrayBuffer()), { limitInputPixels: MAX_INPUT_PIXELS })
+          .rotate()
+          .resize(2400, 2400, { fit: "inside", withoutEnlargement: true })
+          .png()
+          .toBuffer(),
       );
     }
 
     const settings = await prisma.systemSettings.update({
       where: { id: 1 },
       data: {
-        instanceName,
+        instanceName: parsedSettings.instanceName,
         instanceIconFilePath,
         stripeBackgroundPath,
-        stripeFooterText,
-        stripeFooterFontSizePt: Number.isFinite(stripeFooterFontSizePt)
-          ? Math.max(8, Math.min(72, Math.round(stripeFooterFontSizePt)))
-          : 18,
+        stripeFooterText: parsedSettings.stripeFooterText,
+        stripeFooterFontSizePt: Math.round(parsedSettings.stripeFooterFontSizePt),
       },
     });
 
     return jsonSuccess({ message: t("systemSettings.saved"), settings });
   } catch (error) {
+    if (error instanceof Error && error.name === "ZodError") {
+      return jsonError(t("systemSettings.saveFailed"), 422);
+    }
+
     console.error(error);
     return jsonError(t("systemSettings.saveFailed"), 500);
   }

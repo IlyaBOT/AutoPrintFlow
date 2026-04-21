@@ -2,9 +2,10 @@ import { redirect } from "next/navigation";
 
 import { AuthPanel } from "@/components/auth/auth-panel";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getTurnstileSiteKey } from "@/lib/request-security";
 
 export default async function RegisterPage() {
-  const user = await getCurrentUser();
+  const [user, turnstileSiteKey] = await Promise.all([getCurrentUser(), Promise.resolve(getTurnstileSiteKey())]);
 
   if (user) {
     redirect(user.role === "ADMIN" ? "/admin" : "/dashboard");
@@ -12,7 +13,7 @@ export default async function RegisterPage() {
 
   return (
     <main className="page-shell">
-      <AuthPanel initialMode="register" />
+      <AuthPanel initialMode="register" turnstileSiteKey={turnstileSiteKey} />
     </main>
   );
 }

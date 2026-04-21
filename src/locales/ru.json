@@ -258,6 +258,11 @@
     "stripeMany": "полос",
     "cancel": "Отмена"
   },
+  "security": {
+    "humanCheck": "Защита от ботов",
+    "humanCheckRequired": "Подтвердите, что вы не бот, перед отправкой.",
+    "humanCheckFailed": "Проверка на бота не пройдена. Попробуйте ещё раз."
+  },
   "api": {
     "authInvalidCredentials": "Неверный email или пароль.",
     "authInvalidFields": "Введите корректный email и пароль.",
@@ -285,6 +290,9 @@
     "unableToSubmitSticker": "Не удалось отправить стикер.",
     "draftUpdated": "Черновик обновлён.",
     "unableToSaveSticker": "Не удалось сохранить стикер.",
+    "tooManyRequests": "Слишком много запросов. Подождите немного и попробуйте снова.",
+    "botVerificationRequired": "Подтвердите, что вы не бот, перед отправкой.",
+    "botVerificationFailed": "Проверка на бота не пройдена. Попробуйте ещё раз.",
     "onlyPngJpgWebp": "Поддерживаются только PNG, JPG/JPEG и WEBP.",
     "fileTooLarge": "Файл слишком большой. Загрузите изображение размером до 12 МБ.",
     "imageCouldNotBeProcessed": "Не удалось обработать загруженное изображение.",

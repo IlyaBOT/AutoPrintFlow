@@ -1,14 +1,27 @@
 import { z } from "zod";
 
+const optionalTurnstileTokenSchema = z.preprocess((value) => {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : undefined;
+}, z.string().max(2048).optional());
+
 export const registerSchema = z.object({
   name: z.string().trim().min(2).max(80),
   email: z.string().trim().email().max(200).transform((value) => value.toLowerCase()),
   password: z.string().min(8).max(200),
+  website: z.string().trim().max(200).optional(),
+  turnstileToken: optionalTurnstileTokenSchema,
 });
 
 export const loginSchema = z.object({
   email: z.string().trim().email().max(200).transform((value) => value.toLowerCase()),
-  password: z.string().min(8).max(200),
+  password: z.string().min(1).max(200),
+  website: z.string().trim().max(200).optional(),
+  turnstileToken: optionalTurnstileTokenSchema,
 });
 
 export const editorStateSchema = z.object({

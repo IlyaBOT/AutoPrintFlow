@@ -64,6 +64,16 @@ model Session {
   @@index([expiresAt])
 }
 
+model RateLimitBucket {
+  key       String   @id
+  hitCount  Int
+  resetAt   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([resetAt])
+}
+
 model Sticker {
   id               String        @id @default(cuid())
   userId           String

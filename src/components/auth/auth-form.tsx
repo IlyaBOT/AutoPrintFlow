@@ -1,11 +1,12 @@
 "use client";
 
-import { startTransition, useState } from "react";
+import { startTransition, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { useI18n } from "@/components/providers/i18n-provider";
+import { TurnstileWidget, type TurnstileWidgetHandle } from "@/components/security/turnstile-widget";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,16 +16,21 @@ import { NerdIcon } from "@/components/ui/nerd-icon";
 type AuthFormProps =
   | {
       mode: "login";
+      turnstileSiteKey: string | null;
     }
   | {
       mode: "register";
+      turnstileSiteKey: string | null;
     };
 
-export function AuthForm({ mode }: AuthFormProps) {
+export function AuthForm({ mode, turnstileSiteKey }: AuthFormProps) {
   const { t } = useI18n();
   const router = useRouter();
   const [isPending, setIsPending] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileWidgetHandle | null>(null);
+  const captchaEnabled = Boolean(turnstileSiteKey);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -45,16 +51,25 @@ export function AuthForm({ mode }: AuthFormProps) {
       }
     }
 
+    if (captchaEnabled && !turnstileToken) {
+      toast.error(t("security.humanCheckRequired"));
+      return;
+    }
+
     const payload =
       mode === "register"
         ? {
             name: String(formData.get("name") ?? ""),
             email: String(formData.get("email") ?? ""),
             password,
+            website: String(formData.get("website") ?? ""),
+            turnstileToken: turnstileToken ?? undefined,
           }
         : {
             email: String(formData.get("email") ?? ""),
             password,
+            website: String(formData.get("website") ?? ""),
+            turnstileToken: turnstileToken ?? undefined,
           };
 
     setIsPending(true);
@@ -82,6 +97,10 @@ export function AuthForm({ mode }: AuthFormProps) {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("auth.authenticationFailed"));
     } finally {
+      if (captchaEnabled) {
+        setTurnstileToken(null);
+        turnstileRef.current?.reset();
+      }
       setIsPending(false);
     }
   }
@@ -99,6 +118,14 @@ export function AuthForm({ mode }: AuthFormProps) {
       </CardHeader>
       <CardContent>
         <form className="space-y-4" onSubmit={handleSubmit}>
+          <input
+            type="text"
+            name="website"
+            tabIndex={-1}
+            autoComplete="off"
+            className="hidden"
+            aria-hidden="true"
+          />
           {mode === "register" ? (
             <div className="space-y-2">
               <Label htmlFor="name">{t("auth.nameLabel")}</Label>
@@ -134,6 +161,19 @@ export function AuthForm({ mode }: AuthFormProps) {
                 </span>
               </label>
             </>
+          ) : null}
+          {captchaEnabled && turnstileSiteKey ? (
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                {t("security.humanCheck")}
+              </div>
+              <TurnstileWidget
+                ref={turnstileRef}
+                action={mode}
+                siteKey={turnstileSiteKey}
+                onTokenChange={setTurnstileToken}
+              />
+            </div>
           ) : null}
           <Button className="w-full" type="submit" disabled={isPending}>
             {isPending ? <NerdIcon className="text-sm" name="spinner" spin /> : null}

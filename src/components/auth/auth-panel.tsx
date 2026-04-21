@@ -5,13 +5,19 @@ import { useState } from "react";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { AuthForm } from "@/components/auth/auth-form";
 
-export function AuthPanel({ initialMode }: { initialMode: "login" | "register" }) {
+export function AuthPanel({
+  initialMode,
+  turnstileSiteKey,
+}: {
+  initialMode: "login" | "register";
+  turnstileSiteKey: string | null;
+}) {
   const { t } = useI18n();
   const [mode, setMode] = useState<"login" | "register">(initialMode);
 
   return (
     <div className="space-y-6 py-10">
-      <AuthForm mode={mode} />
+      <AuthForm mode={mode} turnstileSiteKey={turnstileSiteKey} />
       {mode === "login" ? (
         <p className="text-center text-sm text-slate-600 dark:text-slate-300">
           {t("auth.noAccount")} {" "}

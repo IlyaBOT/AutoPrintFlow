@@ -21,6 +21,15 @@ function formatNumber(value: number) {
   return Number(value.toFixed(4));
 }
 
+function escapeXml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
 export function getDefaultEditorState(originalWidth: number, originalHeight: number): StickerEditorState {
   const fitScale = Math.min(STICKER_SIZE_PX / originalWidth, STICKER_SIZE_PX / originalHeight);
 
@@ -198,7 +207,7 @@ function buildStripeOverlaySvg(params: {
       ${cards}
       <rect x="0" y="${footerTop}" width="${STRIPE_SIZE.width}" height="${STRIPE_FOOTER_HEIGHT}" fill="#0a0a0a" />
       <rect x="0" y="${footerTop}" width="${STRIPE_SIZE.width}" height="6" fill="rgba(255,255,255,0.08)" />
-      <text x="${STRIPE_SIZE.width / 2}" y="${footerTop + Math.round(STRIPE_FOOTER_HEIGHT * 0.68)}" text-anchor="middle" fill="rgba(255,255,255,0.94)" font-size="${footerFontSizePx}" font-family="Myriad Pro, Liberation Sans, DejaVu Sans, Arial, sans-serif" font-weight="700">${params.footerText}</text>
+      <text x="${STRIPE_SIZE.width / 2}" y="${footerTop + Math.round(STRIPE_FOOTER_HEIGHT * 0.68)}" text-anchor="middle" fill="rgba(255,255,255,0.94)" font-size="${footerFontSizePx}" font-family="Myriad Pro, Liberation Sans, DejaVu Sans, Arial, sans-serif" font-weight="700">${escapeXml(params.footerText)}</text>
     </svg>
   `;
 }

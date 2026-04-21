@@ -11,6 +11,7 @@ export const STICKERS_PER_STRIPE = 8;
 export const STRIPES_PER_SHEET = 3;
 export const STICKERS_PER_SHEET = STICKERS_PER_STRIPE * STRIPES_PER_SHEET;
 export const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
+export const MAX_INPUT_PIXELS = 40_000_000;
 
 export const ACCEPTED_IMAGE_TYPES = new Set([
   "image/png",

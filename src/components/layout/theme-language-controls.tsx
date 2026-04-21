@@ -148,7 +148,7 @@ export function ThemeLanguageControls({
         {menuOpen ? (
           <div
             role="menu"
-            className="absolute right-0 z-[120] mt-2 w-40 overflow-hidden rounded-2xl border border-white/60 bg-white/95 p-1 text-sm text-slate-700 shadow-panel backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/95 dark:text-slate-100"
+            className="absolute right-0 z-[120] mt-2 w-40 overflow-hidden rounded-[4px] border border-white/60 bg-white/95 p-1 text-sm text-slate-700 shadow-panel backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/95 dark:text-slate-100"
           >
             {(Object.keys(languageOptions) as Locale[]).map((key) => {
               const option = languageOptions[key];
@@ -159,7 +159,7 @@ export function ThemeLanguageControls({
                   type="button"
                   onClick={() => setLanguage(key)}
                   className={cn(
-                    "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left transition",
+                    "flex w-full items-center gap-2 rounded-[4px] px-3 py-2 text-left transition",
                     "hover:bg-slate-100/80 dark:hover:bg-slate-800/70",
                   )}
                   role="menuitem"

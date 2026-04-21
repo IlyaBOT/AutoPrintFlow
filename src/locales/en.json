@@ -258,6 +258,11 @@
     "stripeMany": "stripes",
     "cancel": "Cancel"
   },
+  "security": {
+    "humanCheck": "Bot protection",
+    "humanCheckRequired": "Complete the bot check before submitting.",
+    "humanCheckFailed": "Bot verification failed. Please try again."
+  },
   "api": {
     "authInvalidCredentials": "Invalid email or password.",
     "authInvalidFields": "Enter a valid email and password.",
@@ -285,6 +290,9 @@
     "unableToSubmitSticker": "Unable to submit sticker.",
     "draftUpdated": "Draft updated.",
     "unableToSaveSticker": "Unable to save sticker.",
+    "tooManyRequests": "Too many requests. Please wait a bit and try again.",
+    "botVerificationRequired": "Complete the bot check before submitting.",
+    "botVerificationFailed": "Bot verification failed. Please try again.",
     "onlyPngJpgWebp": "Only PNG, JPG/JPEG, and WEBP files are supported.",
     "fileTooLarge": "The file is too large. Upload an image up to 12 MB.",
     "imageCouldNotBeProcessed": "The uploaded image could not be processed.",

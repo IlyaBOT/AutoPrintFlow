@@ -77,6 +77,13 @@ Required variables:
 - `ADMIN_PASSWORD`
 - `NODE_ENV`
 
+Optional security/runtime variables:
+
+- `APP_ORIGIN` - canonical external origin for strict origin checks, e.g. `https://print.ilyabot.space`
+- `POSTGRES_PASSWORD` - password for the internal PostgreSQL container; keep it in sync with `DATABASE_URL`
+- `TURNSTILE_SITE_KEY` - Cloudflare Turnstile site key
+- `TURNSTILE_SECRET_KEY` - Cloudflare Turnstile secret key
+
 For `docker compose`, the container forces `NODE_ENV=production`. Keep `NODE_ENV=development` only for local `npm run dev`.
 
 Default seeded admin credentials:
@@ -152,6 +159,8 @@ Start the full stack:
 docker compose up --build
 ```
 
+Containers use `restart: unless-stopped`, so after the Docker daemon comes back on host boot, the stack starts automatically unless you stopped it explicitly.
+
 What happens on container startup:
 
 - the app image is built
@@ -160,7 +169,7 @@ What happens on container startup:
 - Prisma migrations are applied
 - the admin seed runs
 - the web server starts in the container on port `3000`
-- Docker publishes the app on `${APP_HOST_PORT}` which defaults to `3001`
+- Docker publishes the app on `${APP_HOST_PORT}` which defaults to `3000`
 
 Named volumes:
 
@@ -172,7 +181,7 @@ Named volumes:
 This stack is designed to run alongside other Docker projects.
 
 - PostgreSQL is only exposed inside the Docker network and is not published on the host by default.
-- The web app is published on `APP_HOST_PORT`, which defaults to `3001`.
+- The web app is published on `APP_HOST_PORT`, which defaults to `3000`.
 - Set `COMPOSE_PROJECT_NAME` to keep container, network, and volume names isolated and predictable on a server.
 
 Example `.env` values for a server reachable on the LAN:
@@ -180,8 +189,12 @@ Example `.env` values for a server reachable on the LAN:
 ```env
 COMPOSE_PROJECT_NAME=autoprintflow
 APP_BIND_IP=0.0.0.0
-APP_HOST_PORT=3001
-DATABASE_URL=postgresql://postgres:postgres@postgres:5432/autoprintflow?schema=public
+APP_HOST_PORT=3000
+APP_ORIGIN=https://print.ilyabot.space
+POSTGRES_PASSWORD=replace-this-postgres-password
+DATABASE_URL=postgresql://postgres:replace-this-postgres-password@postgres:5432/autoprintflow?schema=public
+TURNSTILE_SITE_KEY=your-site-key
+TURNSTILE_SECRET_KEY=your-secret-key
 ```
 
 Then start it in the background:
@@ -193,7 +206,7 @@ docker compose up -d --build
 LAN access:
 
 ```text
-http://SERVER_LAN_IP:3001
+http://SERVER_LAN_IP:3000
 ```
 
 If you later put Nginx in front of the app, proxy to the local app port:
@@ -206,12 +219,13 @@ server {
     client_max_body_size 25m;
 
     location / {
-        proxy_pass http://127.0.0.1:3001;
+        proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
     }
@@ -219,6 +233,45 @@ server {
 ```
 
 If you want the app reachable only through Nginx, set `APP_BIND_IP=127.0.0.1` and restart the stack.
+
+## Proxmox one-shot userscript
+
+If you want Proxmox to create an Alpine LXC with Docker and deploy this project automatically, run this on the Proxmox host:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/IlyaBOT/AutoPrintFlow/main/userscript.sh)"
+```
+
+Default behavior:
+
+- creates an unprivileged Alpine 3.23 LXC with Docker
+- enables nesting and keyctl
+- installs Docker Compose inside the LXC
+- clones `https://github.com/IlyaBOT/AutoPrintFlow.git`
+- writes `.env` with `APP_BIND_IP=0.0.0.0` and `APP_HOST_PORT=3000`
+- starts the stack with `docker compose up -d --build`
+
+Useful overrides:
+
+```bash
+CTID=321 \
+CT_HOSTNAME=print-stickers \
+CT_CORES=2 \
+CT_RAM_MB=2048 \
+CT_DISK_GB=8 \
+GIT_REF=main \
+ADMIN_EMAIL=admin@print.local \
+ADMIN_PASSWORD='replace-me' \
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/IlyaBOT/AutoPrintFlow/main/userscript.sh)"
+```
+
+After the script completes, the app should be reachable from the LAN at:
+
+```text
+http://CONTAINER_LAN_IP:3000
+```
+
+If the CT uses the Proxmox firewall, allow inbound `3000/tcp`.
 
 ## Authentication architecture
 

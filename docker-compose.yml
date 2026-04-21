@@ -1,10 +1,11 @@
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: autoprintflow
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d autoprintflow"]
       interval: 5s
@@ -16,6 +17,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
 
   app:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: Dockerfile
@@ -30,8 +32,11 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin12345}
       NODE_ENV: production
       PORT: 3000
+      APP_ORIGIN: ${APP_ORIGIN:-}
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
     ports:
-      - "${APP_BIND_IP:-0.0.0.0}:${APP_HOST_PORT:-3001}:3000"
+      - "${APP_BIND_IP:-0.0.0.0}:${APP_HOST_PORT:-3000}:3000"
     volumes:
       - app-storage:/app/storage
 
