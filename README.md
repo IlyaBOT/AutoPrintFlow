@@ -256,6 +256,8 @@ Useful overrides:
 ```bash
 CTID=321 \
 CT_HOSTNAME=print-stickers \
+CT_TEMPLATE_STORAGE=local \
+CT_CONTAINER_STORAGE=patriot500 \
 CT_CORES=2 \
 CT_RAM_MB=2048 \
 CT_DISK_GB=8 \
@@ -264,6 +266,8 @@ ADMIN_EMAIL=admin@print.local \
 ADMIN_PASSWORD='replace-me' \
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/IlyaBOT/AutoPrintFlow/main/userscript.sh)"
 ```
+
+If your Proxmox host has multiple storages, set `CT_TEMPLATE_STORAGE` and `CT_CONTAINER_STORAGE` to avoid storage prompts completely.
 
 After the script completes, the app should be reachable from the LAN at:
 

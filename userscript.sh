@@ -11,6 +11,8 @@ CT_CORES="${CT_CORES:-2}"
 CT_RAM_MB="${CT_RAM_MB:-2048}"
 CT_DISK_GB="${CT_DISK_GB:-8}"
 ALPINE_VERSION="${ALPINE_VERSION:-3.23}"
+CT_TEMPLATE_STORAGE="${CT_TEMPLATE_STORAGE:-}"
+CT_CONTAINER_STORAGE="${CT_CONTAINER_STORAGE:-}"
 
 APP_DIR="${APP_DIR:-/opt/autoprintflow}"
 APP_BIND_IP="${APP_BIND_IP:-0.0.0.0}"
@@ -65,6 +67,29 @@ wait_for_container_ip() {
   return 1
 }
 
+resolve_created_ctid() {
+  local create_log="$1"
+  local detected=""
+
+  if pct status "$CTID" >/dev/null 2>&1; then
+    printf '%s\n' "$CTID"
+    return 0
+  fi
+
+  detected="$(grep -oE 'LXC Container [0-9]+' "$create_log" | awk '{ print $3 }' | tail -n 1 || true)"
+
+  if [[ -z "$detected" ]]; then
+    detected="$(grep -oE 'Container ID: [0-9]+' "$create_log" | awk '{ print $3 }' | tail -n 1 || true)"
+  fi
+
+  if [[ -n "$detected" ]]; then
+    printf '%s\n' "$detected"
+    return 0
+  fi
+
+  return 1
+}
+
 [[ "${EUID}" -eq 0 ]] || fail "Run this script as root on the Proxmox host."
 
 require_cmd pct
@@ -93,8 +118,33 @@ export var_unprivileged="1"
 export var_nesting="1"
 export var_keyctl="1"
 export var_tags="docker;alpine;autoprintflow"
+if [[ -n "$CT_TEMPLATE_STORAGE" ]]; then
+  export var_template_storage="$CT_TEMPLATE_STORAGE"
+fi
+if [[ -n "$CT_CONTAINER_STORAGE" ]]; then
+  export var_container_storage="$CT_CONTAINER_STORAGE"
+fi
 
-printf 'n\nn\ny\nn\n' | bash <(curl -fsSL "$COMMUNITY_SCRIPT_URL") default
+CREATE_LOG="$TMP_DIR/community-create.log"
+bash <(curl -fsSL "$COMMUNITY_SCRIPT_URL") generated 2>&1 | tee "$CREATE_LOG"
+
+ACTUAL_CTID="$(resolve_created_ctid "$CREATE_LOG" || true)"
+[[ -n "$ACTUAL_CTID" ]] || fail "Could not determine which CT community-scripts created. Check $CREATE_LOG"
+
+if [[ "$ACTUAL_CTID" != "$CTID" ]]; then
+  log "community-scripts created CT ${ACTUAL_CTID} instead of requested ${CTID}; continuing with the actual CT"
+fi
+CTID="$ACTUAL_CTID"
+
+if ! pct status "$CTID" | grep -q "status: running"; then
+  log "Starting CT ${CTID} before copying deployment files"
+  pct start "$CTID" >/dev/null
+fi
+
+ACTUAL_HOSTNAME="$(pct config "$CTID" | awk -F': ' '/^hostname: / { print $2 }' | tail -n 1)"
+if [[ -n "$ACTUAL_HOSTNAME" ]]; then
+  CT_HOSTNAME="$ACTUAL_HOSTNAME"
+fi
 
 log "Preparing project deployment files"
 ENV_FILE="$TMP_DIR/autoprintflow.env"
