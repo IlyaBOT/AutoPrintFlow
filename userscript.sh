@@ -4,6 +4,7 @@ set -Eeuo pipefail
 COMMUNITY_SCRIPT_URL="${COMMUNITY_SCRIPT_URL:-https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/alpine-docker.sh}"
 REPO_URL="${REPO_URL:-https://github.com/IlyaBOT/AutoPrintFlow.git}"
 GIT_REF="${GIT_REF:-main}"
+COMMUNITY_INSTALL_RESPONSES="${COMMUNITY_INSTALL_RESPONSES:-n\nn\ny\nn\n}"
 
 CTID="${CTID:-320}"
 CT_HOSTNAME="${CT_HOSTNAME:-autoprintflow}"
@@ -126,7 +127,7 @@ if [[ -n "$CT_CONTAINER_STORAGE" ]]; then
 fi
 
 CREATE_LOG="$TMP_DIR/community-create.log"
-bash <(curl -fsSL "$COMMUNITY_SCRIPT_URL") generated 2>&1 | tee "$CREATE_LOG"
+printf '%b' "$COMMUNITY_INSTALL_RESPONSES" | bash <(curl -fsSL "$COMMUNITY_SCRIPT_URL") generated 2>&1 | tee "$CREATE_LOG"
 
 ACTUAL_CTID="$(resolve_created_ctid "$CREATE_LOG" || true)"
 [[ -n "$ACTUAL_CTID" ]] || fail "Could not determine which CT community-scripts created. Check $CREATE_LOG"

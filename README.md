@@ -246,6 +246,7 @@ Default behavior:
 
 - creates an unprivileged Alpine 3.23 LXC with Docker
 - enables nesting and keyctl
+- auto-answers the Alpine-Docker installer prompts as `Portainer = N`, `Portainer Agent = N`, `Docker Compose = Y`, `Docker TCP socket = N`
 - installs Docker Compose inside the LXC
 - clones `https://github.com/IlyaBOT/AutoPrintFlow.git`
 - writes `.env` with `APP_BIND_IP=0.0.0.0` and `APP_HOST_PORT=3000`
@@ -268,6 +269,8 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/IlyaBOT/AutoPrintFlow/ma
 ```
 
 If your Proxmox host has multiple storages, set `CT_TEMPLATE_STORAGE` and `CT_CONTAINER_STORAGE` to avoid storage prompts completely.
+
+If you ever want to override the automatic installer answers, set `COMMUNITY_INSTALL_RESPONSES` explicitly.
 
 After the script completes, the app should be reachable from the LAN at:
 
