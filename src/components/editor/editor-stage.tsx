@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Group, Image as KonvaImage, Layer, Rect, Stage, Transformer } from "react-konva";
 import type Konva from "konva";
 
-import { STICKER_SIZE_PX } from "@/lib/image/constants";
+import { MAX_EDITOR_SCALE, MIN_EDITOR_SCALE, STICKER_SIZE_PX } from "@/lib/image/constants";
 import type { StickerEditorState } from "@/types/stickers";
 
 type EditorStageProps = {
@@ -15,6 +15,10 @@ type EditorStageProps = {
   onChange: (nextState: StickerEditorState) => void;
   isLocked: boolean;
 };
+
+function clampScale(value: number) {
+  return Math.min(MAX_EDITOR_SCALE, Math.max(MIN_EDITOR_SCALE, value));
+}
 
 export function EditorStage({
   imageUrl,
@@ -33,8 +37,8 @@ export function EditorStage({
   useEffect(() => {
     const nextImage = new window.Image();
     nextImage.crossOrigin = "anonymous";
-    nextImage.src = imageUrl;
     nextImage.onload = () => setImage(nextImage);
+    nextImage.src = imageUrl;
   }, [imageUrl]);
 
   useEffect(() => {
@@ -116,12 +120,17 @@ export function EditorStage({
                   });
                 }}
                 onTransformEnd={(event) => {
+                  const nextScaleX = clampScale(event.target.scaleX() / ratio);
+                  const nextScaleY = clampScale(event.target.scaleY() / ratio);
+
+                  event.target.scaleX(nextScaleX * ratio);
+                  event.target.scaleY(nextScaleY * ratio);
                   onChange({
                     ...editorState,
                     x: event.target.x() / ratio,
                     y: event.target.y() / ratio,
-                    scaleX: event.target.scaleX() / ratio,
-                    scaleY: event.target.scaleY() / ratio,
+                    scaleX: nextScaleX,
+                    scaleY: nextScaleY,
                     rotation: event.target.rotation(),
                   });
                 }}

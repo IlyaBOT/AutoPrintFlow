@@ -1,4 +1,6 @@
 export const STICKER_SIZE_PX = 496;
+export const MIN_EDITOR_SCALE = 0.05;
+export const MAX_EDITOR_SCALE = 8;
 export const STRIPE_SIZE = {
   width: 1120,
   height: 2409,

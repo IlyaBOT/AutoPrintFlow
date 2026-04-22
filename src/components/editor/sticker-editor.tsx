@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { startTransition, useDeferredValue, useMemo, useState } from "react";
+import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -14,8 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NerdIcon } from "@/components/ui/nerd-icon";
 import { Separator } from "@/components/ui/separator";
+import { MAX_EDITOR_SCALE, MIN_EDITOR_SCALE, STICKER_SIZE_PX } from "@/lib/image/constants";
 import { cn } from "@/lib/utils";
-import { STICKER_SIZE_PX } from "@/lib/image/constants";
 import type { StickerEditorState } from "@/types/stickers";
 
 const DynamicEditorStage = dynamic(
@@ -72,6 +72,40 @@ function buildFillState(originalWidth: number, originalHeight: number) {
   } satisfies StickerEditorState;
 }
 
+function clampScale(value: number) {
+  return Math.min(MAX_EDITOR_SCALE, Math.max(MIN_EDITOR_SCALE, value));
+}
+
+function useLoadedImage(imageUrl: string) {
+  const [image, setImage] = useState<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    let disposed = false;
+
+    setImage(null);
+
+    const nextImage = new window.Image();
+    nextImage.crossOrigin = "anonymous";
+    nextImage.onload = () => {
+      if (!disposed) {
+        setImage(nextImage);
+      }
+    };
+    nextImage.onerror = () => {
+      if (!disposed) {
+        setImage(null);
+      }
+    };
+    nextImage.src = imageUrl;
+
+    return () => {
+      disposed = true;
+    };
+  }, [imageUrl]);
+
+  return image;
+}
+
 function PreviewScene({
   imageUrl,
   state,
@@ -85,24 +119,47 @@ function PreviewScene({
   originalHeight: number;
   className?: string;
 }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const image = useLoadedImage(imageUrl);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+
+    if (!canvas) {
+      return;
+    }
+
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      return;
+    }
+
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.clearRect(0, 0, STICKER_SIZE_PX, STICKER_SIZE_PX);
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, STICKER_SIZE_PX, STICKER_SIZE_PX);
+
+    if (!image) {
+      return;
+    }
+
+    context.save();
+    context.beginPath();
+    context.rect(0, 0, STICKER_SIZE_PX, STICKER_SIZE_PX);
+    context.clip();
+    context.translate(state.x, state.y);
+    context.rotate((state.rotation * Math.PI) / 180);
+    context.scale(state.scaleX, state.scaleY);
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+    context.drawImage(image, -originalWidth / 2, -originalHeight / 2, originalWidth, originalHeight);
+    context.restore();
+  }, [image, originalHeight, originalWidth, state]);
+
   return (
     <div className={cn("relative aspect-square overflow-hidden rounded-[24px] bg-white", className)}>
-      <svg viewBox={`0 0 ${STICKER_SIZE_PX} ${STICKER_SIZE_PX}`} className="h-full w-full" preserveAspectRatio="none">
-        <g transform={`translate(${state.x} ${state.y})`}>
-          <g transform={`rotate(${state.rotation})`}>
-            <g transform={`scale(${state.scaleX} ${state.scaleY})`}>
-              <image
-                href={imageUrl}
-                x={-originalWidth / 2}
-                y={-originalHeight / 2}
-                width={originalWidth}
-                height={originalHeight}
-                preserveAspectRatio="none"
-              />
-            </g>
-          </g>
-        </g>
-      </svg>
+      <canvas ref={canvasRef} width={STICKER_SIZE_PX} height={STICKER_SIZE_PX} className="h-full w-full" />
     </div>
   );
 }
@@ -286,8 +343,8 @@ export function StickerEditor({
                 onClick={() =>
                   setEditorState((current) => ({
                     ...current,
-                    scaleX: current.scaleX * 1.06,
-                    scaleY: current.scaleY * 1.06,
+                    scaleX: clampScale(current.scaleX * 1.06),
+                    scaleY: clampScale(current.scaleY * 1.06),
                   }))
                 }
                 disabled={isLocked}
@@ -301,8 +358,8 @@ export function StickerEditor({
                 onClick={() =>
                   setEditorState((current) => ({
                     ...current,
-                    scaleX: current.scaleX * 0.94,
-                    scaleY: current.scaleY * 0.94,
+                    scaleX: clampScale(current.scaleX * 0.94),
+                    scaleY: clampScale(current.scaleY * 0.94),
                   }))
                 }
                 disabled={isLocked}
@@ -320,15 +377,15 @@ export function StickerEditor({
                 <Input
                   id="scaleX"
                   type="range"
-                  min="0.1"
-                  max="4"
+                  min={MIN_EDITOR_SCALE}
+                  max={MAX_EDITOR_SCALE}
                   step="0.01"
                   value={editorState.scaleX}
                   disabled={isLocked}
                   onChange={(event) =>
                     setEditorState((current) => ({
                       ...current,
-                      scaleX: Number(event.target.value),
+                      scaleX: clampScale(Number(event.target.value)),
                     }))
                   }
                 />
@@ -338,15 +395,15 @@ export function StickerEditor({
                 <Input
                   id="scaleY"
                   type="range"
-                  min="0.1"
-                  max="4"
+                  min={MIN_EDITOR_SCALE}
+                  max={MAX_EDITOR_SCALE}
                   step="0.01"
                   value={editorState.scaleY}
                   disabled={isLocked}
                   onChange={(event) =>
                     setEditorState((current) => ({
                       ...current,
-                      scaleY: Number(event.target.value),
+                      scaleY: clampScale(Number(event.target.value)),
                     }))
                   }
                 />

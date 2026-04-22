@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { MAX_EDITOR_SCALE, MIN_EDITOR_SCALE } from "@/lib/image/constants";
+
 const optionalTurnstileTokenSchema = z.preprocess((value) => {
   if (typeof value !== "string") {
     return undefined;
@@ -27,8 +29,8 @@ export const loginSchema = z.object({
 export const editorStateSchema = z.object({
   x: z.number().finite().min(-2048).max(4096),
   y: z.number().finite().min(-2048).max(4096),
-  scaleX: z.number().finite().positive().min(0.05).max(8),
-  scaleY: z.number().finite().positive().min(0.05).max(8),
+  scaleX: z.number().finite().positive().min(MIN_EDITOR_SCALE).max(MAX_EDITOR_SCALE),
+  scaleY: z.number().finite().positive().min(MIN_EDITOR_SCALE).max(MAX_EDITOR_SCALE),
   rotation: z.number().finite().min(-360).max(360),
 });
 
