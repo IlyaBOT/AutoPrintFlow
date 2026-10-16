@@ -32,14 +32,17 @@ export async function POST(
     const body = await request.json();
     const payload = rejectStickerSchema.parse(body);
 
-    await prisma.sticker.update({
-      where: { id: sticker.id },
+    const updated = await prisma.sticker.updateMany({
+      where: { id: sticker.id, status: StickerStatus.SUBMITTED },
       data: {
         status: StickerStatus.REJECTED,
         rejectReason: payload.reason,
         approvedAt: null,
       },
     });
+
+    if (updated.count !== 1)
+      return jsonError("Order changed; reload this page.", 409);
 
     return jsonSuccess({
       success: true,

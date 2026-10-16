@@ -1,11 +1,22 @@
 import "server-only";
 
 import path from "path";
+import crypto from "crypto";
 
-import sharp from "sharp";
+import sharp, { type OverlayOptions } from "sharp";
+import { renderProductionSticker } from "./artwork";
+import { fitState } from "./geometry";
 
-import { STICKER_SIZE_PX, STRIPE_SIZE, SHEET_SIZE } from "@/lib/image/constants";
-import { convertPtToPx, getSystemSettings, resolveStripeFooterText } from "@/lib/system-settings";
+import {
+  STICKER_SIZE_PX,
+  STRIPE_SIZE,
+  SHEET_SIZE,
+} from "@/lib/image/constants";
+import {
+  convertPtToPx,
+  getSystemSettings,
+  resolveStripeFooterText,
+} from "@/lib/system-settings";
 import {
   STORAGE_DIRS,
   buildDeterministicName,
@@ -15,9 +26,13 @@ import {
   writeStoredFile,
 } from "@/lib/storage";
 import { parseEditorState } from "@/lib/validation";
-import type { QueueSheet, QueueStripe, StickerEditorState } from "@/types/stickers";
+import type {
+  QueueSheet,
+  QueueStripe,
+  StickerEditorState,
+} from "@/types/stickers";
 
-const RENDER_VERSION = "settings-v3";
+const RENDER_VERSION = "production-v4";
 const STICKER_PRINT_BORDER_PX = 8;
 const STICKER_CORNER_RADIUS_PX = 8;
 
@@ -34,19 +49,31 @@ function escapeXml(value: string) {
     .replace(/'/g, "&apos;");
 }
 
-export function getDefaultEditorState(originalWidth: number, originalHeight: number): StickerEditorState {
-  const fitScale = Math.min(STICKER_SIZE_PX / originalWidth, STICKER_SIZE_PX / originalHeight);
-
-  return {
-    x: STICKER_SIZE_PX / 2,
-    y: STICKER_SIZE_PX / 2,
-    scaleX: fitScale,
-    scaleY: fitScale,
-    rotation: 0,
-  };
+export function getDefaultEditorState(
+  originalWidth: number,
+  originalHeight: number,
+): StickerEditorState {
+  return fitState(
+    {
+      x: 248,
+      y: 248,
+      scaleX: 1,
+      scaleY: 1,
+      rotation: 0,
+      cutShape: "rounded",
+      cutSizeMm: 42,
+      borderMm: 2,
+    },
+    originalWidth,
+    originalHeight,
+  );
 }
 
-function buildRoundedRectMaskSvg(width: number, height: number, radius: number) {
+function buildRoundedRectMaskSvg(
+  width: number,
+  height: number,
+  radius: number,
+) {
   return `
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
       <rect x="0" y="0" width="${width}" height="${height}" rx="${radius}" ry="${radius}" fill="#ffffff" />
@@ -58,7 +85,13 @@ async function applyRoundedStickerMask(buffer: Buffer) {
   return sharp(buffer)
     .composite([
       {
-        input: Buffer.from(buildRoundedRectMaskSvg(STICKER_SIZE_PX, STICKER_SIZE_PX, STICKER_CORNER_RADIUS_PX)),
+        input: Buffer.from(
+          buildRoundedRectMaskSvg(
+            STICKER_SIZE_PX,
+            STICKER_SIZE_PX,
+            STICKER_CORNER_RADIUS_PX,
+          ),
+        ),
         blend: "dest-in",
       },
     ])
@@ -109,6 +142,7 @@ export async function renderStickerPng(params: {
   originalHeight: number;
   state: StickerEditorState;
 }) {
+  if (params.state.cutShape) return renderProductionSticker(params);
   const svg = buildStickerSvg(params);
   const stickerBuffer = await sharp(Buffer.from(svg)).png().toBuffer();
   const innerSize = STICKER_SIZE_PX - STICKER_PRINT_BORDER_PX * 2;
@@ -145,16 +179,20 @@ export async function renderAndStoreStickerAssets(params: {
   originalHeight: number;
   state: StickerEditorState;
 }) {
+  const assetVersion = crypto.randomUUID();
   const finalBuffer = await renderStickerPng(params);
   const previewBuffer = await createPreviewPng(finalBuffer);
   const finalFilePath = await writeStoredFile(
     STORAGE_DIRS.finalStickers,
-    path.posix.join(params.userId, `${params.stickerId}.png`),
+    path.posix.join(params.userId, `${params.stickerId}-${assetVersion}.png`),
     finalBuffer,
   );
   const previewFilePath = await writeStoredFile(
     STORAGE_DIRS.previews,
-    path.posix.join(params.userId, `${params.stickerId}-preview.png`),
+    path.posix.join(
+      params.userId,
+      `${params.stickerId}-${assetVersion}-preview.png`,
+    ),
     previewBuffer,
   );
 
@@ -229,18 +267,16 @@ function buildStripeOverlaySvg(params: {
     </g>
   `;
 
-  const cards = STRIPE_CARD_POSITIONS
-    .map((position, index) => {
-      const filled = params.occupiedSlots[index];
-      return `
+  const cards = STRIPE_CARD_POSITIONS.map((position, index) => {
+    const filled = params.occupiedSlots[index];
+    return `
         <g>
           <rect x="${position.x + STRIPE_CARD_SHADOW_OFFSET.x}" y="${position.y + STRIPE_CARD_SHADOW_OFFSET.y}" width="${STRIPE_CARD_SIZE}" height="${STRIPE_CARD_SIZE}" rx="${STRIPE_CARD_RADIUS}" fill="rgba(8, 14, 24, 0.18)" />
           <rect x="${position.x}" y="${position.y}" width="${STRIPE_CARD_SIZE}" height="${STRIPE_CARD_SIZE}" rx="${STRIPE_CARD_RADIUS}" fill="rgba(255,255,255,0.995)" stroke="rgba(255,255,255,0.92)" stroke-width="2" />
           ${filled ? "" : emptySlotIcon(position)}
         </g>
       `;
-    })
-    .join("");
+  }).join("");
 
   const footerTop = STRIPE_SIZE.height - STRIPE_FOOTER_HEIGHT;
   const footerFontSizePx = convertPtToPx(params.footerFontSizePt);
@@ -255,21 +291,29 @@ function buildStripeOverlaySvg(params: {
   `;
 }
 
-const STRIPE_CARD_COORDINATES = STRIPE_CARD_POSITIONS.map((position) => ({
-  left: position.x + STRIPE_STICKER_INSET,
-  top: position.y + STRIPE_STICKER_INSET,
-}));
+export const STRIPE_CARD_COORDINATES = STRIPE_CARD_POSITIONS.map(
+  (position) => ({
+    left: position.x + STRIPE_STICKER_INSET,
+    top: position.y + STRIPE_STICKER_INSET,
+  }),
+);
 
-export async function renderStripePng(stripe: QueueStripe) {
+export async function renderStripePng(
+  stripe: QueueStripe,
+  includeArtwork = true,
+) {
   const settings = await getSystemSettings();
   const footerText = resolveStripeFooterText(settings.stripeFooterText);
-  const base =
-    settings.stripeBackgroundPath
-      ? sharp(await readStoredFile(settings.stripeBackgroundPath)).resize(STRIPE_SIZE.width, STRIPE_SIZE.height, {
+  const base = settings.stripeBackgroundPath
+    ? sharp(await readStoredFile(settings.stripeBackgroundPath)).resize(
+        STRIPE_SIZE.width,
+        STRIPE_SIZE.height,
+        {
           fit: "cover",
-        })
-      : sharp(Buffer.from(buildDefaultStripeBackgroundSvg()));
-  const composites: sharp.OverlayOptions[] = [
+        },
+      )
+    : sharp(Buffer.from(buildDefaultStripeBackgroundSvg()));
+  const composites: OverlayOptions[] = [
     {
       input: Buffer.from(
         buildStripeOverlaySvg({
@@ -283,56 +327,19 @@ export async function renderStripePng(stripe: QueueStripe) {
 
   await Promise.all(
     stripe.slots.map(async (slot, index) => {
-      if (!slot) {
+      if (!slot || !includeArtwork) {
         return;
       }
 
-      let stickerBuffer: Buffer;
-
-      try {
-        if (
-          !slot.originalFilePath ||
-          !slot.originalWidth ||
-          !slot.originalHeight ||
-          typeof slot.editorStateJson === "undefined"
-        ) {
-          throw new Error("Missing source sticker metadata.");
-        }
-
-        stickerBuffer = await renderStickerPng({
-          sourceBuffer: await readStoredFile(slot.originalFilePath),
-          mimeType: getMimeTypeFromPath(slot.originalFilePath),
-          originalWidth: slot.originalWidth,
-          originalHeight: slot.originalHeight,
-          state: parseEditorState(slot.editorStateJson),
-        });
-      } catch {
-        if (!slot.finalFilePath) {
-          return;
-        }
-
-        const fallbackSticker = await readStoredFile(slot.finalFilePath);
-        const innerSize = STICKER_SIZE_PX - STICKER_PRINT_BORDER_PX * 2;
-
-        const filledSticker = await sharp(fallbackSticker)
-          .flatten({
-            background: "#ffffff",
-          })
-          .resize(innerSize, innerSize, {
-            fit: "fill",
-          })
-          .extend({
-            top: STICKER_PRINT_BORDER_PX,
-            right: STICKER_PRINT_BORDER_PX,
-            bottom: STICKER_PRINT_BORDER_PX,
-            left: STICKER_PRINT_BORDER_PX,
-            background: "#ffffff",
-          })
-          .png()
-          .toBuffer();
-
-        stickerBuffer = await applyRoundedStickerMask(filledSticker);
-      }
+      const stickerBuffer = slot.finalFilePath
+        ? await readStoredFile(slot.finalFilePath)
+        : await renderStickerPng({
+            sourceBuffer: await readStoredFile(slot.originalFilePath!),
+            mimeType: getMimeTypeFromPath(slot.originalFilePath!),
+            originalWidth: slot.originalWidth!,
+            originalHeight: slot.originalHeight!,
+            state: parseEditorState(slot.editorStateJson),
+          });
 
       composites.push({
         input: stickerBuffer,
@@ -342,7 +349,11 @@ export async function renderStripePng(stripe: QueueStripe) {
     }),
   );
 
-  return base.composite(composites).png().toBuffer();
+  return base
+    .composite(composites)
+    .withMetadata({ density: 300 })
+    .png()
+    .toBuffer();
 }
 
 function buildSheetSvg() {
@@ -354,15 +365,15 @@ function buildSheetSvg() {
   `;
 }
 
-const SHEET_STRIPE_POSITIONS = [
+export const SHEET_STRIPE_POSITIONS = [
   { left: 37, top: 37 },
   { left: 1194, top: 37 },
   { left: 2351, top: 37 },
 ];
 
-export async function renderSheetPng(sheet: QueueSheet) {
+export async function renderSheetPng(sheet: QueueSheet, includeArtwork = true) {
   const base = sharp(Buffer.from(buildSheetSvg())).png();
-  const composites: sharp.OverlayOptions[] = [];
+  const composites: OverlayOptions[] = [];
 
   for (let index = 0; index < 3; index += 1) {
     const stripe = sheet.stripes[index] ?? {
@@ -373,7 +384,7 @@ export async function renderSheetPng(sheet: QueueSheet) {
       slots: Array.from({ length: 8 }, () => null),
       stickerCount: 0,
     };
-    const stripeBuffer = await renderStripePng(stripe);
+    const stripeBuffer = await renderStripePng(stripe, includeArtwork);
     composites.push({
       input: stripeBuffer,
       left: SHEET_STRIPE_POSITIONS[index].left,
@@ -381,14 +392,23 @@ export async function renderSheetPng(sheet: QueueSheet) {
     });
   }
 
-  return base.composite(composites).png().toBuffer();
+  return base
+    .composite(composites)
+    .withMetadata({ density: 300 })
+    .png()
+    .toBuffer();
 }
 
 async function getStripeSeed(stripe: QueueStripe) {
   const settings = await getSystemSettings();
   return [
     RENDER_VERSION,
-    stripe.slots.map((slot) => `${slot?.id ?? "empty"}:${slot?.updatedAt?.toISOString() ?? "none"}`).join("-"),
+    stripe.slots
+      .map(
+        (slot) =>
+          `${slot?.id ?? "empty"}:${slot?.updatedAt?.toISOString() ?? "none"}`,
+      )
+      .join("-"),
     settings.stripeBackgroundPath ?? "default-bg",
     settings.stripeFooterText,
     String(settings.stripeFooterFontSizePt),
@@ -397,15 +417,25 @@ async function getStripeSeed(stripe: QueueStripe) {
 }
 
 async function getSheetSeed(sheet: QueueSheet) {
-  const stripeSeeds = await Promise.all(sheet.stripes.map((stripe) => getStripeSeed(stripe)));
+  const stripeSeeds = await Promise.all(
+    sheet.stripes.map((stripe) => getStripeSeed(stripe)),
+  );
   return [RENDER_VERSION, stripeSeeds.join("|")].join("|");
 }
 
 export async function getOrCreateStripeFile(stripe: QueueStripe) {
-  const fileName = buildDeterministicName(`stripe-${stripe.index}`, await getStripeSeed(stripe), ".png");
+  const fileName = buildDeterministicName(
+    `stripe-${stripe.index}`,
+    await getStripeSeed(stripe),
+    ".png",
+  );
   const relativePath = path.posix.join(fileName);
 
-  if (!(await fileExists(path.posix.join(STORAGE_DIRS.generatedStripes, relativePath)))) {
+  if (
+    !(await fileExists(
+      path.posix.join(STORAGE_DIRS.generatedStripes, relativePath),
+    ))
+  ) {
     const buffer = await renderStripePng(stripe);
     await writeStoredFile(STORAGE_DIRS.generatedStripes, relativePath, buffer);
   }
@@ -414,10 +444,18 @@ export async function getOrCreateStripeFile(stripe: QueueStripe) {
 }
 
 export async function getOrCreateSheetFile(sheet: QueueSheet) {
-  const fileName = buildDeterministicName(`sheet-${sheet.index}`, await getSheetSeed(sheet), ".png");
+  const fileName = buildDeterministicName(
+    `sheet-${sheet.index}`,
+    await getSheetSeed(sheet),
+    ".png",
+  );
   const relativePath = path.posix.join(fileName);
 
-  if (!(await fileExists(path.posix.join(STORAGE_DIRS.generatedSheets, relativePath)))) {
+  if (
+    !(await fileExists(
+      path.posix.join(STORAGE_DIRS.generatedSheets, relativePath),
+    ))
+  ) {
     const buffer = await renderSheetPng(sheet);
     await writeStoredFile(STORAGE_DIRS.generatedSheets, relativePath, buffer);
   }

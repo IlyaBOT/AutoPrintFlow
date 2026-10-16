@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { StickerEditor } from "@/components/editor/sticker-editor";
 import { requireUserPage } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
+import { getApprovedQueueLayout } from "@/lib/queue-data";
 import { buildQueueLayout } from "@/lib/queue";
 import { getStickerEditorState } from "@/lib/stickers";
 
@@ -16,7 +17,7 @@ export default async function StickerEditorPage({
   const sticker = await prisma.sticker.findFirst({
     where: {
       id: stickerId,
-      userId: user.id,
+      ...(user.role === "ADMIN" ? {} : { userId: user.id }),
     },
   });
 
@@ -24,26 +25,11 @@ export default async function StickerEditorPage({
     notFound();
   }
 
-  const approvedQueue = await prisma.sticker.findMany({
-    where: {
-      status: "APPROVED",
-      printedAt: null,
-    },
-    select: {
-      id: true,
-      userId: true,
-      createdAt: true,
-      approvedAt: true,
-      submittedAt: true,
-      printedAt: true,
-      finalFilePath: true,
-      previewFilePath: true,
-      status: true,
-    },
-    orderBy: [{ approvedAt: "asc" }, { createdAt: "asc" }],
-  });
-
-  const currentInApprovedQueue = approvedQueue.some((item) => item.id === sticker.id);
+  const queue = await getApprovedQueueLayout();
+  const approvedQueue = queue.stripes.flatMap((stripe) => stripe.stickers);
+  const currentInApprovedQueue = approvedQueue.some(
+    (item) => item.id === sticker.id,
+  );
   const previewQueue = currentInApprovedQueue
     ? approvedQueue
     : [
@@ -61,9 +47,19 @@ export default async function StickerEditorPage({
         },
       ];
 
-  const { stripes } = buildQueueLayout(previewQueue);
-  const previewStripe =
-    stripes.find((stripe) => stripe.slots.some((slot) => slot?.id === sticker.id)) ??
+  const { stripes } = buildQueueLayout(previewQueue, {
+    separateCustomers: queue.separateCustomers,
+    stripes: queue.stripes.map((stripe) => ({
+      id: stripe.id!,
+      position: stripe.position!,
+      customerId: stripe.customerId ?? null,
+      label: stripe.label ?? null,
+      isManual: stripe.isManual ?? false,
+    })),
+  });
+  const previewStripe = stripes.find((stripe) =>
+    stripe.slots.some((slot) => slot?.id === sticker.id),
+  ) ??
     stripes.at(0) ?? {
       index: 1,
       sheetIndex: 1,
@@ -78,17 +74,27 @@ export default async function StickerEditorPage({
         ? { kind: "current" as const, id: slot.id }
         : slot.userId !== user.id
           ? { kind: "locked" as const }
-        : {
-            kind: "existing" as const,
-            id: slot.id,
-            imageUrl: slot.previewFilePath ? `/api/stickers/${slot.id}/asset?variant=preview` : null,
-          }
+          : {
+              kind: "existing" as const,
+              id: slot.id,
+              imageUrl: slot.previewFilePath
+                ? `/api/stickers/${slot.id}/asset?variant=preview`
+                : null,
+            }
       : null,
   );
 
   return (
     <main className="page-shell">
       <StickerEditor
+        legacyPreviewUrl={
+          !getStickerEditorState(sticker).cutShape &&
+          !["DRAFT", "REJECTED"].includes(sticker.status)
+            ? `/api/stickers/${sticker.id}/asset?variant=final`
+            : undefined
+        }
+        initialVersion={sticker.updatedAt.toISOString()}
+        readOnly={sticker.userId !== user.id}
         stickerId={sticker.id}
         status={sticker.status}
         rejectReason={sticker.rejectReason}

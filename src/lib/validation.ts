@@ -13,14 +13,24 @@ const optionalTurnstileTokenSchema = z.preprocess((value) => {
 
 export const registerSchema = z.object({
   name: z.string().trim().min(2).max(80),
-  email: z.string().trim().email().max(200).transform((value) => value.toLowerCase()),
+  email: z
+    .string()
+    .trim()
+    .email()
+    .max(200)
+    .transform((value) => value.toLowerCase()),
   password: z.string().min(8).max(200),
   website: z.string().trim().max(200).optional(),
   turnstileToken: optionalTurnstileTokenSchema,
 });
 
 export const loginSchema = z.object({
-  email: z.string().trim().email().max(200).transform((value) => value.toLowerCase()),
+  email: z
+    .string()
+    .trim()
+    .email()
+    .max(200)
+    .transform((value) => value.toLowerCase()),
   password: z.string().min(1).max(200),
   website: z.string().trim().max(200).optional(),
   turnstileToken: optionalTurnstileTokenSchema,
@@ -29,9 +39,37 @@ export const loginSchema = z.object({
 export const editorStateSchema = z.object({
   x: z.number().finite().min(-2048).max(4096),
   y: z.number().finite().min(-2048).max(4096),
-  scaleX: z.number().finite().positive().min(MIN_EDITOR_SCALE).max(MAX_EDITOR_SCALE),
-  scaleY: z.number().finite().positive().min(MIN_EDITOR_SCALE).max(MAX_EDITOR_SCALE),
+  scaleX: z
+    .number()
+    .finite()
+    .positive()
+    .min(MIN_EDITOR_SCALE)
+    .max(MAX_EDITOR_SCALE),
+  scaleY: z
+    .number()
+    .finite()
+    .positive()
+    .min(MIN_EDITOR_SCALE)
+    .max(MAX_EDITOR_SCALE),
   rotation: z.number().finite().min(-360).max(360),
+  crop: z
+    .object({
+      x: z.number().finite().min(0).max(1),
+      y: z.number().finite().min(0).max(1),
+      width: z.number().finite().min(0.01).max(1),
+      height: z.number().finite().min(0.01).max(1),
+    })
+    .refine(
+      (crop) =>
+        crop.x + crop.width <= 1.000001 && crop.y + crop.height <= 1.000001,
+      "Crop exceeds source image",
+    )
+    .optional(),
+  flipX: z.boolean().optional(),
+  flipY: z.boolean().optional(),
+  cutShape: z.enum(["square", "rounded", "contour"]).optional(),
+  cutSizeMm: z.number().finite().min(20).max(42).optional(),
+  borderMm: z.number().finite().min(0).max(4).optional(),
 });
 
 export const rejectStickerSchema = z.object({

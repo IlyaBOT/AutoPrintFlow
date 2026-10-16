@@ -40,7 +40,9 @@ function detectTheme(): Theme {
     return cookieTheme;
   }
 
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
 }
 
 function applyTheme(theme: Theme) {
@@ -48,11 +50,7 @@ function applyTheme(theme: Theme) {
   document.documentElement.style.colorScheme = theme;
 }
 
-export function ThemeLanguageControls({
-  locale,
-}: {
-  locale: Locale;
-}) {
+export function ThemeLanguageControls({ locale }: { locale: Locale }) {
   const { t } = useI18n();
   const [theme, setTheme] = useState<Theme>("light");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -120,13 +118,20 @@ export function ThemeLanguageControls({
       <button
         type="button"
         onClick={toggleTheme}
-        aria-label={theme === "dark" ? t("header.switchToLight") : t("header.switchToDark")}
+        aria-label={
+          theme === "dark"
+            ? t("header.switchToLight")
+            : t("header.switchToDark")
+        }
         className={cn(
-          "flex h-9 w-9 items-center justify-center rounded-full border border-white/60 bg-white/70 text-slate-800 shadow-soft transition-all duration-150",
+          "flex h-11 w-10 items-center justify-center rounded-full border border-white/60 bg-white/70 text-slate-800 shadow-soft transition-all duration-150",
           "hover:bg-white/90 active:scale-95 active:rotate-[-8deg] dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-100 dark:hover:bg-slate-900/80",
         )}
       >
-        <NerdIcon className="text-base" name={theme === "dark" ? "moon" : "sun"} />
+        <NerdIcon
+          className="text-base"
+          name={theme === "dark" ? "moon" : "sun"}
+        />
       </button>
 
       <div className="relative z-[100]" ref={menuRef}>
@@ -134,15 +139,21 @@ export function ThemeLanguageControls({
           type="button"
           onClick={() => setMenuOpen((current) => !current)}
           className={cn(
-            "flex h-9 items-center gap-2 rounded-full border border-white/60 bg-white/70 px-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700 shadow-soft transition-all duration-150",
+            "flex h-11 items-center gap-1 rounded-full border border-white/60 bg-white/70 px-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700 shadow-soft transition-all duration-150",
             "hover:bg-white/90 active:scale-95 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-100 dark:hover:bg-slate-900/80",
           )}
+          aria-label={
+            t("header.languageRussian") + " / " + t("header.languageEnglish")
+          }
           aria-haspopup="menu"
           aria-expanded={menuOpen}
         >
           <span className="text-base leading-none">{currentLanguage.flag}</span>
-          <span>{currentLanguage.code}</span>
-          <NerdIcon className="text-[10px] text-slate-500 dark:text-slate-400" name="chevronDown" />
+          <span className="hidden sm:inline">{currentLanguage.code}</span>
+          <NerdIcon
+            className="text-[10px] text-slate-500 dark:text-slate-400"
+            name="chevronDown"
+          />
         </button>
 
         {menuOpen ? (
@@ -165,7 +176,9 @@ export function ThemeLanguageControls({
                   role="menuitem"
                 >
                   <span className="text-base leading-none">{option.flag}</span>
-                  <span className="text-xs font-semibold uppercase tracking-[0.2em]">{option.code}</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em]">
+                    {option.code}
+                  </span>
                   <span className="ml-auto text-xs text-slate-500 dark:text-slate-400">
                     {t(option.labelKey)}
                   </span>

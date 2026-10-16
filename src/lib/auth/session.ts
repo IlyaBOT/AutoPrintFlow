@@ -116,7 +116,7 @@ async function loadSessionFromCookie() {
     void prisma.session.update({
       where: { id: session.id },
       data: { lastUsedAt: new Date() },
-    });
+    }).catch(error => console.error("Session touch failed", error));
   }
 
   return {

@@ -15,25 +15,39 @@ type ModerationActionsProps = {
   status: StickerStatus;
 };
 
-export function ModerationActions({ stickerId, status }: ModerationActionsProps) {
+export function ModerationActions({
+  stickerId,
+  status,
+}: ModerationActionsProps) {
   const { t } = useI18n();
   const router = useRouter();
   const [rejectReason, setRejectReason] = useState("");
-  const [pendingAction, setPendingAction] = useState<null | "approve" | "reject" | "printed">(null);
+  const [pendingAction, setPendingAction] = useState<
+    null | "approve" | "reject" | "printed"
+  >(null);
 
   async function runAction(action: "approve" | "reject" | "printed") {
     setPendingAction(action);
 
     try {
-      const response = await fetch(`/api/admin/stickers/${stickerId}/${action}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `/api/admin/stickers/${stickerId}/${action}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body:
+            action === "reject"
+              ? JSON.stringify({ reason: rejectReason })
+              : undefined,
         },
-        body: action === "reject" ? JSON.stringify({ reason: rejectReason }) : undefined,
-      });
+      );
 
-      const result = (await response.json()) as { error?: string; message?: string };
+      const result = (await response.json()) as {
+        error?: string;
+        message?: string;
+      };
 
       if (!response.ok) {
         throw new Error(result.error ?? t("admin.actionFailed"));
@@ -42,7 +56,9 @@ export function ModerationActions({ stickerId, status }: ModerationActionsProps)
       toast.success(result.message ?? t("admin.updated"));
       router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("admin.actionFailed"));
+      toast.error(
+        error instanceof Error ? error.message : t("admin.actionFailed"),
+      );
     } finally {
       setPendingAction(null);
     }
@@ -57,8 +73,17 @@ export function ModerationActions({ stickerId, status }: ModerationActionsProps)
       {status === "SUBMITTED" ? (
         <>
           <div className="flex gap-3">
-            <Button className="flex-1" size="sm" onClick={() => runAction("approve")} disabled={pendingAction !== null}>
-              {pendingAction === "approve" ? <NerdIcon className="text-sm" name="spinner" spin /> : <NerdIcon className="text-sm" name="check" />}
+            <Button
+              className="flex-1"
+              size="sm"
+              onClick={() => runAction("approve")}
+              disabled={pendingAction !== null}
+            >
+              {pendingAction === "approve" ? (
+                <NerdIcon className="text-sm" name="spinner" spin />
+              ) : (
+                <NerdIcon className="text-sm" name="check" />
+              )}
               {t("admin.approve")}
             </Button>
             <Button
@@ -66,13 +91,19 @@ export function ModerationActions({ stickerId, status }: ModerationActionsProps)
               size="sm"
               variant="destructive"
               onClick={() => runAction("reject")}
-              disabled={pendingAction !== null}
+              disabled={pendingAction !== null || rejectReason.trim().length < 3}
             >
-              {pendingAction === "reject" ? <NerdIcon className="text-sm" name="spinner" spin /> : <NerdIcon className="text-sm" name="reject" />}
+              {pendingAction === "reject" ? (
+                <NerdIcon className="text-sm" name="spinner" spin />
+              ) : (
+                <NerdIcon className="text-sm" name="reject" />
+              )}
               {t("admin.reject")}
             </Button>
           </div>
           <Textarea
+            aria-label={t("admin.rejectReasonPlaceholder")}
+            maxLength={300}
             placeholder={t("admin.rejectReasonPlaceholder")}
             value={rejectReason}
             onChange={(event) => setRejectReason(event.target.value)}
@@ -82,8 +113,18 @@ export function ModerationActions({ stickerId, status }: ModerationActionsProps)
       ) : null}
 
       {status === "APPROVED" ? (
-        <Button className="w-full" size="sm" variant="secondary" onClick={() => runAction("printed")} disabled={pendingAction !== null}>
-          {pendingAction === "printed" ? <NerdIcon className="text-sm" name="spinner" spin /> : <NerdIcon className="text-sm" name="printer" />}
+        <Button
+          className="w-full"
+          size="sm"
+          variant="secondary"
+          onClick={() => runAction("printed")}
+          disabled={pendingAction !== null}
+        >
+          {pendingAction === "printed" ? (
+            <NerdIcon className="text-sm" name="spinner" spin />
+          ) : (
+            <NerdIcon className="text-sm" name="printer" />
+          )}
           {t("admin.markPrinted")}
         </Button>
       ) : null}

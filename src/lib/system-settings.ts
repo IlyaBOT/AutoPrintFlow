@@ -12,6 +12,8 @@ export const DEFAULT_SYSTEM_SETTINGS = {
 } as const;
 
 export async function getSystemSettings() {
+  const existing = await prisma.systemSettings.findUnique({ where: { id: 1 } });
+  if (existing) return existing;
   const settings = await prisma.systemSettings.upsert({
     where: { id: 1 },
     update: {},
@@ -26,7 +28,10 @@ export async function getSystemSettings() {
   return settings;
 }
 
-export function resolveStripeFooterText(template: string, year = new Date().getFullYear()) {
+export function resolveStripeFooterText(
+  template: string,
+  year = new Date().getFullYear(),
+) {
   return template.replace(/\{year\}/g, String(year));
 }
 

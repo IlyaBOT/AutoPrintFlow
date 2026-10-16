@@ -32,15 +32,27 @@ export async function POST(
 
   try {
     const body = await request.json();
+    if (
+      typeof body.version !== "string" ||
+      body.version !== sticker.updatedAt.toISOString()
+    )
+      return jsonError(
+        "Макет изменился. Обновите страницу. / Artwork changed; reload this page.",
+        409,
+      );
     const editorState = editorStateSchema.parse(body.editorState);
-    await saveStickerStateAndAssets(sticker, editorState);
+    const updated = await saveStickerStateAndAssets(sticker, editorState);
 
     return jsonSuccess({
       success: true,
+      version: updated.updatedAt.toISOString(),
       message: t("api.draftUpdated"),
     });
   } catch (error) {
     console.error(error);
-    return jsonError(error instanceof Error ? error.message : t("api.unableToSaveSticker"), 422);
+    return jsonError(
+      error instanceof Error ? error.message : t("api.unableToSaveSticker"),
+      422,
+    );
   }
 }

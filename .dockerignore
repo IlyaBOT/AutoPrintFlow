@@ -3,3 +3,12 @@ node_modules
 npm-debug.log*
 storage
 .git
+
+.env*
+!.env.example
+backups
+test-results
+playwright-report
+*.tsbuildinfo
+
+release

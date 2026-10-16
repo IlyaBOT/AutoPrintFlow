@@ -5,12 +5,26 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { useI18n } from "@/components/providers/i18n-provider";
-import { TurnstileWidget, type TurnstileWidgetHandle } from "@/components/security/turnstile-widget";
+import {
+  TurnstileWidget,
+  type TurnstileWidgetHandle,
+} from "@/components/security/turnstile-widget";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { MAX_UPLOAD_BYTES, ACCEPTED_IMAGE_TYPES } from "@/lib/image/constants";
 import { NerdIcon } from "@/components/ui/nerd-icon";
 
-export function UploadPanel({ turnstileSiteKey }: { turnstileSiteKey: string | null }) {
+export function UploadPanel({
+  turnstileSiteKey,
+}: {
+  turnstileSiteKey: string | null;
+}) {
   const { t } = useI18n();
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -28,6 +42,15 @@ export function UploadPanel({ turnstileSiteKey }: { turnstileSiteKey: string | n
 
     if (!(file instanceof File) || file.size === 0) {
       toast.error(t("upload.chooseImage"));
+      return;
+    }
+
+    if (!ACCEPTED_IMAGE_TYPES.has(file.type)) {
+      toast.error(t("api.onlyPngJpgWebp"));
+      return;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      toast.error(t("api.fileTooLarge"));
       return;
     }
 
@@ -49,7 +72,10 @@ export function UploadPanel({ turnstileSiteKey }: { turnstileSiteKey: string | n
         body: uploadData,
       });
 
-      const result = (await response.json()) as { error?: string; stickerId?: string };
+      const result = (await response.json()) as {
+        error?: string;
+        stickerId?: string;
+      };
 
       if (!response.ok || !result.stickerId) {
         throw new Error(result.error ?? t("upload.uploadFailed"));
@@ -60,7 +86,9 @@ export function UploadPanel({ turnstileSiteKey }: { turnstileSiteKey: string | n
         router.push(`/editor/${result.stickerId}`);
       });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("upload.uploadFailed"));
+      toast.error(
+        error instanceof Error ? error.message : t("upload.uploadFailed"),
+      );
     } finally {
       if (captchaEnabled) {
         setTurnstileToken(null);
@@ -75,9 +103,7 @@ export function UploadPanel({ turnstileSiteKey }: { turnstileSiteKey: string | n
       <CardHeader className="space-y-3">
         <div className="section-kicker">{t("upload.step")}</div>
         <CardTitle className="text-3xl">{t("upload.title")}</CardTitle>
-        <CardDescription>
-          {t("upload.description")}
-        </CardDescription>
+        <CardDescription>{t("upload.description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <form className="space-y-5" onSubmit={handleUpload}>
@@ -91,7 +117,21 @@ export function UploadPanel({ turnstileSiteKey }: { turnstileSiteKey: string | n
           />
           <label
             htmlFor="file"
-            className="group flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-[32px] border border-dashed border-sky-300/80 bg-gradient-to-br from-white/75 to-sky-50/70 p-6 text-center transition hover:border-sky-400 hover:bg-white/85 dark:border-slate-700 dark:from-slate-900 dark:to-slate-900 dark:hover:border-sky-500 dark:hover:from-slate-800 dark:hover:to-slate-800"
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault();
+              if (
+                isPending ||
+                !event.dataTransfer.files.length ||
+                !inputRef.current
+              )
+                return;
+              const transfer = new DataTransfer();
+              transfer.items.add(event.dataTransfer.files[0]);
+              inputRef.current.files = transfer.files;
+              setFileName(transfer.files[0].name);
+            }}
+            className="group focus-within:ring-2 focus-within:ring-sky-500 flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-[32px] border border-dashed border-sky-300/80 bg-gradient-to-br from-white/75 to-sky-50/70 p-6 text-center transition hover:border-sky-400 hover:bg-white/85 dark:border-slate-700 dark:from-slate-900 dark:to-slate-900 dark:hover:border-sky-500 dark:hover:from-slate-800 dark:hover:to-slate-800"
           >
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-[20px] bg-slate-950 text-white shadow-lg shadow-slate-900/15 dark:bg-sky-400 dark:text-slate-950">
               <NerdIcon className="text-xl" name="upload" />
@@ -107,6 +147,7 @@ export function UploadPanel({ turnstileSiteKey }: { turnstileSiteKey: string | n
               id="file"
               name="file"
               type="file"
+              disabled={isPending}
               accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
               className="sr-only"
               onChange={(event) => {
@@ -120,7 +161,11 @@ export function UploadPanel({ turnstileSiteKey }: { turnstileSiteKey: string | n
               {t("upload.recommended")}
             </div>
             <Button type="submit" disabled={isPending}>
-              {isPending ? <NerdIcon className="text-sm" name="spinner" spin /> : <NerdIcon className="text-sm" name="image" />}
+              {isPending ? (
+                <NerdIcon className="text-sm" name="spinner" spin />
+              ) : (
+                <NerdIcon className="text-sm" name="image" />
+              )}
               {t("upload.continueToEditor")}
             </Button>
           </div>

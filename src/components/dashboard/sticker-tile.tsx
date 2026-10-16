@@ -50,6 +50,7 @@ export function StickerTile({ sticker }: StickerTileProps) {
           <div className="overflow-hidden rounded-[24px] border border-white/60 bg-white/80 p-3">
             <img
               src={`/api/stickers/${sticker.id}/asset?variant=preview`}
+              loading="lazy"
               alt={t("common.stickerPreviewAlt", { id: sticker.id })}
               className="aspect-square w-full rounded-[20px] object-cover"
             />
@@ -64,7 +65,7 @@ export function StickerTile({ sticker }: StickerTileProps) {
           <div>{t("stickerTile.moderation", { value: moderationValue })}</div>
         </div>
       </CardContent>
-      <CardFooter className="flex gap-3">
+      <CardFooter className="flex flex-wrap gap-2">
         <Button asChild className="flex-1" variant="secondary">
           <a href={`/api/stickers/${sticker.id}/asset?variant=final&download=1`}>
             <NerdIcon className="text-sm" name="download" />

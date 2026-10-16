@@ -5,22 +5,24 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-semibold transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-semibold transition-[background-color,box-shadow,transform] duration-150 disabled:pointer-events-none disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-lg shadow-sky-500/25 hover:translate-y-[-1px] hover:bg-sky-500 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400",
+          "bg-primary text-primary-foreground shadow-lg shadow-sky-500/25 hover:bg-sky-500 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400",
         secondary:
           "bg-white/70 text-foreground shadow-soft ring-1 ring-inset ring-white/60 hover:bg-white/85 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700 dark:hover:bg-slate-700",
-        ghost: "bg-transparent text-foreground hover:bg-white/50 dark:text-slate-200 dark:hover:bg-slate-800/80",
-        outline: "border border-white/60 bg-white/40 text-foreground hover:bg-white/70 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800",
+        ghost:
+          "bg-transparent text-foreground hover:bg-white/50 dark:text-slate-200 dark:hover:bg-slate-800/80",
+        outline:
+          "border border-white/60 bg-white/40 text-foreground hover:bg-white/70 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800",
         destructive:
           "bg-destructive text-destructive-foreground shadow-lg shadow-red-500/20 hover:bg-red-600",
       },
       size: {
         default: "h-11 px-5",
-        sm: "h-9 px-4 text-sm",
+        sm: "h-11 px-4 text-sm",
         lg: "h-12 px-6 text-base",
         icon: "h-11 w-11 rounded-full",
       },
@@ -33,7 +35,8 @@ const buttonVariants = cva(
 );
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+  extends
+    React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
 }
@@ -41,7 +44,13 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
-    return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />;
+    return (
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        {...props}
+      />
+    );
   },
 );
 Button.displayName = "Button";

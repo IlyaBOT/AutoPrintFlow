@@ -3,6 +3,7 @@ import "server-only";
 import fs from "fs/promises";
 
 import { clearGeneratedQueueAssets } from "@/lib/content-maintenance";
+import { withQueueLock } from "@/lib/queue-data";
 import { prisma } from "@/lib/prisma";
 import { resolveStoragePath } from "@/lib/storage";
 
@@ -28,9 +29,11 @@ export async function deleteUserWithContent(userId: string) {
     },
   });
 
-  await prisma.user.delete({
-    where: { id: userId },
-  });
+  await withQueueLock((tx) =>
+    tx.user.delete({
+      where: { id: userId },
+    }),
+  );
 
   await Promise.all(
     stickers.flatMap((sticker) => [

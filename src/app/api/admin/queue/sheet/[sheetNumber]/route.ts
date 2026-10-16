@@ -1,5 +1,6 @@
 export const runtime = "nodejs";
 
+import { matchesSheetSnapshot } from "@/lib/queue-snapshot";
 import { getCurrentUser } from "@/lib/auth/session";
 import { jsonError } from "@/lib/http";
 import { getTranslator } from "@/lib/i18n-server";
@@ -32,6 +33,18 @@ export async function GET(
     return jsonError(t("api.sheetNotFound"), 404);
   }
 
+  const expectedIds = new URL(request.url).searchParams.get("ids");
+  const expectedLayout = new URL(request.url).searchParams.get("layout");
+  if (
+    (expectedIds || expectedLayout) &&
+    (!expectedLayout ||
+      !matchesSheetSnapshot(
+        sheet,
+        (expectedIds ?? "").split(","),
+        expectedLayout,
+      ))
+  )
+    return jsonError("Queue changed; reload this page.", 409);
   const filePath = await getOrCreateSheetFile(sheet);
   const buffer = await readStoredFile(filePath);
   const download = new URL(request.url).searchParams.get("download") === "1";

@@ -1,3 +1,9 @@
+import { ProductionDownloads } from "@/components/admin/production-downloads";
+import {
+  sheetSnapshotQuery,
+  sheetStickerIds,
+  sheetLayoutToken,
+} from "@/lib/queue-snapshot";
 import { notFound } from "next/navigation";
 
 import { StripeCard } from "@/components/admin/stripe-card";
@@ -17,8 +23,10 @@ export default async function AdminSheetDetailsPage({
   await requireAdminPage();
   const locale = await getLocale();
   const messages = getMessages(locale);
-  const t = (key: string, values?: Record<string, string | number | null | undefined>) =>
-    translate(messages, key, values);
+  const t = (
+    key: string,
+    values?: Record<string, string | number | null | undefined>,
+  ) => translate(messages, key, values);
   const { sheetNumber } = await params;
   const sheetIndex = Number(sheetNumber);
   const { sheets } = await getApprovedQueueLayout();
@@ -33,8 +41,12 @@ export default async function AdminSheetDetailsPage({
       <section className="glass-panel rounded-[36px] p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="section-kicker">{t("admin.sheetDetailsKicker")}</div>
-            <h1 className="mt-2 text-3xl font-semibold text-slate-950">{t("admin.sheetTitle", { index: sheet.index })}</h1>
+            <div className="section-kicker">
+              {t("admin.sheetDetailsKicker")}
+            </div>
+            <h1 className="mt-2 text-3xl font-semibold text-slate-950">
+              {t("admin.sheetTitle", { index: sheet.index })}
+            </h1>
             <p className="mt-2 text-slate-600">
               {t("admin.sheetSummary", {
                 stripeCount: sheet.stripeCount,
@@ -53,15 +65,27 @@ export default async function AdminSheetDetailsPage({
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <SheetPrintButton sheetIndex={sheet.index} />
+            <SheetPrintButton
+              sheetIndex={sheet.index}
+              stickerIds={sheetStickerIds(sheet)}
+              layout={sheetLayoutToken(sheet)}
+            />
+            <ProductionDownloads
+              sheetIndex={sheet.index}
+              snapshot={sheetSnapshotQuery(sheet)}
+            />
             <Button asChild variant="secondary">
-              <a href={`/api/admin/queue/sheet/${sheet.index}?download=1`}>{t("admin.sheetDetailsDownload")}</a>
+              <a
+                href={`/api/admin/queue/sheet/${sheet.index}?download=1&${sheetSnapshotQuery(sheet)}`}
+              >
+                {t("admin.sheetDetailsDownload")}
+              </a>
             </Button>
           </div>
         </div>
         <div className="mt-6 overflow-hidden rounded-[30px] border border-white/60 bg-white/80 p-4">
           <img
-            src={`/api/admin/queue/sheet/${sheet.index}`}
+            src={`/api/admin/queue/sheet/${sheet.index}?${sheetSnapshotQuery(sheet)}`}
             alt={t("admin.sheetAlt", { index: sheet.index })}
             className="aspect-[3508/2480] w-full rounded-[24px] object-cover"
           />
@@ -70,8 +94,12 @@ export default async function AdminSheetDetailsPage({
 
       <section className="space-y-4">
         <div>
-          <div className="section-kicker">{t("admin.containedStripesKicker")}</div>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-950">{t("admin.containedStripesTitle")}</h2>
+          <div className="section-kicker">
+            {t("admin.containedStripesKicker")}
+          </div>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-950">
+            {t("admin.containedStripesTitle")}
+          </h2>
         </div>
         <div className="grid gap-5 xl:grid-cols-3">
           {sheet.stripes.map((stripe) => (

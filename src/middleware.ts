@@ -5,11 +5,16 @@ function buildExpectedOrigin(request: NextRequest) {
   const envOrigin = process.env.APP_ORIGIN?.trim();
 
   if (envOrigin) {
-    return envOrigin;
+    return new URL(envOrigin).origin;
   }
 
-  const protocol = request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "");
-  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? request.nextUrl.host;
+  const protocol =
+    request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() ??
+    request.nextUrl.protocol.replace(":", "");
+  const host =
+    request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() ??
+    request.headers.get("host") ??
+    request.nextUrl.host;
 
   return `${protocol}://${host}`;
 }
@@ -36,7 +41,9 @@ function extractRequestOrigin(request: NextRequest) {
 
 export function middleware(request: NextRequest) {
   const isStateChanging = !["GET", "HEAD", "OPTIONS"].includes(request.method);
-  const protectedPath = request.nextUrl.pathname.startsWith("/api/") || request.nextUrl.pathname === "/logout";
+  const protectedPath =
+    request.nextUrl.pathname.startsWith("/api/") ||
+    request.nextUrl.pathname === "/logout";
 
   if (!protectedPath || !isStateChanging) {
     return NextResponse.next();
@@ -52,11 +59,17 @@ export function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
-    return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
+    return NextResponse.json(
+      { error: "Invalid request origin." },
+      { status: 403 },
+    );
   }
 
   if (requestOrigin !== expectedOrigin) {
-    return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
+    return NextResponse.json(
+      { error: "Invalid request origin." },
+      { status: 403 },
+    );
   }
 
   return NextResponse.next();

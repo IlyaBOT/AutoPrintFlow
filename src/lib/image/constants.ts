@@ -1,6 +1,11 @@
 export const STICKER_SIZE_PX = 496;
-export const MIN_EDITOR_SCALE = 0.05;
+export const MIN_EDITOR_SCALE = 0.00000001;
 export const MAX_EDITOR_SCALE = 8;
+export const STICKER_SIZE_MM = 42;
+export const PRINT_DPI = 300;
+export const SAFE_MARGIN_MM = 2;
+export const MACHINE_SIZE_MM = 80;
+export const mmToPx = (mm: number) => (mm * STICKER_SIZE_PX) / STICKER_SIZE_MM;
 export const STRIPE_SIZE = {
   width: 1120,
   height: 2409,

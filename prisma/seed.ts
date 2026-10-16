@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { Role } from "@prisma/client";
 
 import { hashPassword } from "../src/lib/auth/password";
@@ -11,11 +12,7 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: env.ADMIN_EMAIL.toLowerCase() },
-    update: {
-      name: "AutoPrintFlow Admin",
-      passwordHash,
-      role: Role.ADMIN,
-    },
+    update: {},
     create: {
       name: "AutoPrintFlow Admin",
       email: env.ADMIN_EMAIL.toLowerCase(),
@@ -59,16 +56,41 @@ async function main() {
       productionUnit: "SHEET" as const,
       acceptsMaterials: true,
       materials: [
-        { name: "Office paper", weightGsm: 80, finish: "Plain", isDefault: true, sortOrder: 0 },
-        { name: "Matte photo paper", weightGsm: 220, finish: "Matte", isDefault: false, sortOrder: 1 },
-        { name: "Glossy photo paper", weightGsm: 230, finish: "Glossy", isDefault: false, sortOrder: 2 },
-        { name: "Self-adhesive office paper", weightGsm: 80, finish: "Adhesive", isDefault: false, sortOrder: 3 },
+        {
+          name: "Office paper",
+          weightGsm: 80,
+          finish: "Plain",
+          isDefault: true,
+          sortOrder: 0,
+        },
+        {
+          name: "Matte photo paper",
+          weightGsm: 220,
+          finish: "Matte",
+          isDefault: false,
+          sortOrder: 1,
+        },
+        {
+          name: "Glossy photo paper",
+          weightGsm: 230,
+          finish: "Glossy",
+          isDefault: false,
+          sortOrder: 2,
+        },
+        {
+          name: "Self-adhesive office paper",
+          weightGsm: 80,
+          finish: "Adhesive",
+          isDefault: false,
+          sortOrder: 3,
+        },
       ],
     },
     {
       slug: "disc-print",
       name: "CD / DVD print",
-      description: "Disc-centric print workflow counted in discs instead of sheets.",
+      description:
+        "Disc-centric print workflow counted in discs instead of sheets.",
       type: "DISC_PRINT" as const,
       productionUnit: "DISK" as const,
       acceptsMaterials: false,

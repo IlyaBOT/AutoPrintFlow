@@ -1,36 +1,61 @@
+import {
+  ArrowRight,
+  Check,
+  X,
+  Download,
+  Pencil,
+  Scan,
+  Image,
+  Layers,
+  LockKeyhole,
+  Moon,
+  Printer,
+  RotateCcw,
+  Rows3,
+  Send,
+  ShieldCheck,
+  LoaderCircle,
+  Sparkles,
+  Sticker,
+  Sun,
+  Upload,
+  UserCircle2,
+  ZoomIn,
+  ZoomOut,
+  ChevronDown,
+  ImageOff,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const glyphs = {
-  arrowRight: "→",
-  check: "✓",
-  close: "✕",
-  download: "↓",
-  edit: "✎",
-  fit: "⤢",
-  image: "▣",
-  layers: "▤",
-  lock: "⛒",
-  moon: "☾",
-  pencil: "✎",
-  printer: "⎙",
-  refresh: "↻",
-  reject: "✕",
-  rows: "☰",
-  send: "➜",
-  shield: "⛨",
-  spinner: "◌",
-  star: "★",
-  sticker: "⬚",
-  sun: "☼",
-  upload: "↑",
-  userCircle: "👤",
-  zoomIn: "⊕",
-  zoomOut: "⊖",
-  chevronDown: "▾",
-} as const;
-
-export type NerdIconName = keyof typeof glyphs | "imageLockOutline";
-
+const icons = {
+  arrowRight: ArrowRight,
+  check: Check,
+  close: X,
+  download: Download,
+  edit: Pencil,
+  fit: Scan,
+  image: Image,
+  layers: Layers,
+  lock: LockKeyhole,
+  moon: Moon,
+  pencil: Pencil,
+  printer: Printer,
+  refresh: RotateCcw,
+  reject: X,
+  rows: Rows3,
+  send: Send,
+  shield: ShieldCheck,
+  spinner: LoaderCircle,
+  star: Sparkles,
+  sticker: Sticker,
+  sun: Sun,
+  upload: Upload,
+  userCircle: UserCircle2,
+  zoomIn: ZoomIn,
+  zoomOut: ZoomOut,
+  chevronDown: ChevronDown,
+  imageLockOutline: ImageOff,
+};
+export type NerdIconName = keyof typeof icons;
 export function NerdIcon({
   className,
   name,
@@ -40,38 +65,16 @@ export function NerdIcon({
   name: NerdIconName;
   spin?: boolean;
 }) {
-  if (name === "imageLockOutline") {
-    return (
-      <span
-        aria-hidden="true"
-        className={cn("nf-icon inline-flex items-center justify-center leading-none", spin && "animate-spin", className)}
-      >
-        <svg
-          viewBox="0 0 24 24"
-          className="h-[1em] w-[1em]"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <rect x="3.5" y="4.5" width="17" height="12.5" rx="2.5" />
-          <circle cx="8.75" cy="9.25" r="1.2" fill="currentColor" stroke="none" />
-          <path d="M5.5 15.1l4.1-4.1a1 1 0 0 1 1.4 0l2.4 2.4" />
-          <path d="M12.7 13.3l1.3-1.3a1 1 0 0 1 1.4 0l1.7 1.7" />
-          <path d="M14 18.3v-1a2.5 2.5 0 1 1 5 0v1" />
-          <rect x="12.5" y="18.3" width="8" height="4.2" rx="1.1" />
-        </svg>
-      </span>
-    );
-  }
-
+  const Icon = icons[name];
   return (
-    <span
+    <Icon
       aria-hidden="true"
-      className={cn("nf-icon inline-flex items-center justify-center leading-none", spin && "animate-spin", className)}
-    >
-      {glyphs[name]}
-    </span>
+      className={cn(
+        "inline-block h-[1em] w-[1em] shrink-0",
+        spin && "animate-spin",
+        className,
+      )}
+      strokeWidth={1.8}
+    />
   );
 }

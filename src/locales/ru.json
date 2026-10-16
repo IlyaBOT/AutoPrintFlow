@@ -225,9 +225,9 @@
     "portalKicker": "Панель администратора",
     "printQueueHeading": "Очередь печати",
     "printQueueDescription": "Управляйте печатными листами, модерацией, настройками аккаунта и системными параметрами.",
-    "accountTab": "Account",
-    "printQueueTab": "Print queue",
-    "systemSettingsTab": "System Settings",
+    "accountTab": "Аккаунт",
+    "printQueueTab": "Заказы",
+    "systemSettingsTab": "Настройки",
     "accountTitle": "Настройки аккаунта",
     "accountDescription": "Измените профиль администратора, пароль или полностью удалите аккаунт.",
     "markSheetPrinted": "Отметить лист напечатанным",
@@ -325,8 +325,8 @@
     "accountDeleteFailed": "Не удалось удалить аккаунт."
   },
   "systemSettings": {
-    "pageTitle": "System Settings",
-    "pageDescription": "Управление рендером стрипов, брендингом инстанса и доступом пользователей.",
+    "pageTitle": "Настройки мастерской",
+    "pageDescription": "Оформление сайта, материалы, пользователи и резервные копии.",
     "layoutTitle": "Настройки макета стрипов",
     "layoutDescription": "Изменяйте фон под стикерами, текст подписи и стандартный брендинг генерируемых стрипов.",
     "instanceName": "Название инстанса",

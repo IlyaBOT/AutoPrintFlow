@@ -1,5 +1,6 @@
 export const runtime = "nodejs";
 
+import { stripeLayoutToken } from "@/lib/queue-snapshot";
 import { getCurrentUser } from "@/lib/auth/session";
 import { jsonError } from "@/lib/http";
 import { getTranslator } from "@/lib/i18n-server";
@@ -32,6 +33,9 @@ export async function GET(
     return jsonError(t("api.stripeNotFound"), 404);
   }
 
+  const expected = new URL(request.url).searchParams.get("layout");
+  if (expected && stripeLayoutToken(stripe) !== expected)
+    return jsonError("Queue changed; reload this page.", 409);
   const filePath = await getOrCreateStripeFile(stripe);
   const buffer = await readStoredFile(filePath);
   const download = new URL(request.url).searchParams.get("download") === "1";

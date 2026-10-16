@@ -1,25 +1,29 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Group, Image as KonvaImage, Layer, Rect, Stage, Transformer } from "react-konva";
+import { useEffect, useRef, useState } from "react";
+import {
+  Group,
+  Image as KonvaImage,
+  Layer,
+  Rect,
+  Stage,
+  Transformer,
+  Path,
+} from "react-konva";
 import type Konva from "konva";
-
-import { MAX_EDITOR_SCALE, MIN_EDITOR_SCALE, STICKER_SIZE_PX } from "@/lib/image/constants";
+import { STICKER_SIZE_PX } from "@/lib/image/constants";
+import { constrainState, getCrop, getCutGeometry } from "@/lib/image/geometry";
 import type { StickerEditorState } from "@/types/stickers";
 
-type EditorStageProps = {
+type Props = {
   imageUrl: string;
   originalWidth: number;
   originalHeight: number;
   editorState: StickerEditorState;
-  onChange: (nextState: StickerEditorState) => void;
+  onChange: (state: StickerEditorState) => void;
   isLocked: boolean;
+  cutPath?: string;
 };
-
-function clampScale(value: number) {
-  return Math.min(MAX_EDITOR_SCALE, Math.max(MIN_EDITOR_SCALE, value));
-}
-
 export function EditorStage({
   imageUrl,
   originalWidth,
@@ -27,146 +31,174 @@ export function EditorStage({
   editorState,
   onChange,
   isLocked,
-}: EditorStageProps) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const imageRef = useRef<Konva.Image | null>(null);
-  const transformerRef = useRef<Konva.Transformer | null>(null);
-  const [displaySize, setDisplaySize] = useState(STICKER_SIZE_PX);
+  cutPath,
+}: Props) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<Konva.Image>(null);
+  const transformerRef = useRef<Konva.Transformer>(null);
+  const [displaySize, setDisplaySize] = useState(320);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
-
   useEffect(() => {
-    const nextImage = new window.Image();
-    nextImage.crossOrigin = "anonymous";
-    nextImage.onload = () => setImage(nextImage);
-    nextImage.src = imageUrl;
+    let disposed = false;
+    const next = new window.Image();
+    next.onload = () => {
+      if (!disposed) setImage(next);
+    };
+    next.onerror = () => {
+      if (!disposed) setImage(null);
+    };
+    next.src = imageUrl;
+    return () => {
+      disposed = true;
+    };
   }, [imageUrl]);
-
   useEffect(() => {
-    const element = containerRef.current;
-
-    if (!element) {
-      return;
-    }
-
-    const observer = new ResizeObserver(([entry]) => {
-      setDisplaySize(Math.min(Math.floor(entry.contentRect.width), STICKER_SIZE_PX));
-    });
-
-    observer.observe(element);
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver(([entry]) =>
+      setDisplaySize(
+        Math.max(
+          1,
+          Math.min(Math.floor(entry.contentRect.width), STICKER_SIZE_PX),
+        ),
+      ),
+    );
+    observer.observe(containerRef.current);
     return () => observer.disconnect();
   }, []);
-
   useEffect(() => {
-    if (!transformerRef.current || !imageRef.current) {
-      return;
-    }
-
-    transformerRef.current.nodes([imageRef.current]);
-    transformerRef.current.getLayer()?.batchDraw();
-  }, [image, displaySize]);
-
-  const ratio = useMemo(() => displaySize / STICKER_SIZE_PX, [displaySize]);
-
+    if (imageRef.current && transformerRef.current)
+      transformerRef.current.nodes([imageRef.current]);
+  }, [image, isLocked]);
+  const ratio = displaySize / STICKER_SIZE_PX;
+  const crop = getCrop(editorState, originalWidth, originalHeight);
+  const geometry = getCutGeometry(editorState);
+  function readNode(node: Konva.Image) {
+    return constrainState(
+      {
+        ...editorState,
+        x: node.x() / ratio,
+        y: node.y() / ratio,
+        scaleX: Math.abs(node.scaleX()) / ratio,
+        scaleY: Math.abs(node.scaleY()) / ratio,
+        rotation: ((((node.rotation() + 180) % 360) + 360) % 360) - 180,
+      },
+      originalWidth,
+      originalHeight,
+    );
+  }
+  function keepInside(node: Konva.Image) {
+    const state = readNode(node);
+    node.position({ x: state.x * ratio, y: state.y * ratio });
+    node.scale({
+      x: state.scaleX * ratio * (editorState.flipX ? -1 : 1),
+      y: state.scaleY * ratio * (editorState.flipY ? -1 : 1),
+    });
+  }
   return (
-    <div ref={containerRef} className="w-full">
-      <Stage
-        width={displaySize}
-        height={displaySize}
-        className="rounded-[32px] border border-white/60 bg-[linear-gradient(145deg,rgba(255,255,255,0.86),rgba(229,241,255,0.65))] shadow-panel"
-      >
+    <div
+      ref={containerRef}
+      className="mx-auto w-full max-w-[496px] touch-none overflow-hidden rounded-2xl border-2 border-slate-500 bg-white"
+      data-testid="editor-stage"
+      role="img"
+      aria-label="42 × 42 mm sticker template"
+    >
+      <Stage width={displaySize} height={displaySize}>
         <Layer>
           <Rect
-            x={0}
-            y={0}
             width={displaySize}
             height={displaySize}
-            fill="rgba(255,255,255,0.7)"
-            stroke="rgba(127,168,227,0.5)"
-            strokeWidth={1}
-            cornerRadius={36}
+            fill="#fff"
+            listening={false}
           />
-          <Rect
-            x={displaySize * 0.06}
-            y={displaySize * 0.06}
-            width={displaySize * 0.88}
-            height={displaySize * 0.88}
-            fill="rgba(196,220,255,0.18)"
-            stroke="rgba(127,168,227,0.24)"
-            dash={[8, 8]}
-            cornerRadius={24}
-          />
-        </Layer>
-        <Layer>
-          <Group clipX={0} clipY={0} clipWidth={displaySize} clipHeight={displaySize}>
-            {image ? (
+          <Group
+            clipX={0}
+            clipY={0}
+            clipWidth={displaySize}
+            clipHeight={displaySize}
+          >
+            {image && (
               <KonvaImage
                 ref={imageRef}
                 image={image}
                 x={editorState.x * ratio}
                 y={editorState.y * ratio}
-                width={originalWidth}
-                height={originalHeight}
-                offsetX={originalWidth / 2}
-                offsetY={originalHeight / 2}
-                scaleX={editorState.scaleX * ratio}
-                scaleY={editorState.scaleY * ratio}
+                width={crop.width}
+                height={crop.height}
+                offsetX={crop.width / 2}
+                offsetY={crop.height / 2}
+                cropX={crop.x}
+                cropY={crop.y}
+                cropWidth={crop.width}
+                cropHeight={crop.height}
+                scaleX={
+                  editorState.scaleX * ratio * (editorState.flipX ? -1 : 1)
+                }
+                scaleY={
+                  editorState.scaleY * ratio * (editorState.flipY ? -1 : 1)
+                }
                 rotation={editorState.rotation}
                 draggable={!isLocked}
-                onDragEnd={(event) => {
-                  onChange({
-                    ...editorState,
-                    x: event.target.x() / ratio,
-                    y: event.target.y() / ratio,
-                  });
-                }}
-                onTransformEnd={(event) => {
-                  const nextScaleX = clampScale(event.target.scaleX() / ratio);
-                  const nextScaleY = clampScale(event.target.scaleY() / ratio);
-
-                  event.target.scaleX(nextScaleX * ratio);
-                  event.target.scaleY(nextScaleY * ratio);
-                  onChange({
-                    ...editorState,
-                    x: event.target.x() / ratio,
-                    y: event.target.y() / ratio,
-                    scaleX: nextScaleX,
-                    scaleY: nextScaleY,
-                    rotation: event.target.rotation(),
-                  });
-                }}
+                onDragMove={(event) => keepInside(event.target as Konva.Image)}
+                onDragEnd={(event) =>
+                  onChange(readNode(event.target as Konva.Image))
+                }
+                onTransform={(event) => keepInside(event.target as Konva.Image)}
+                onTransformEnd={(event) =>
+                  onChange(readNode(event.target as Konva.Image))
+                }
               />
-            ) : null}
+            )}
           </Group>
-          {!isLocked && image ? (
+          <Rect
+            x={geometry.safeInset * ratio}
+            y={geometry.safeInset * ratio}
+            width={(496 - geometry.safeInset * 2) * ratio}
+            height={(496 - geometry.safeInset * 2) * ratio}
+            stroke="#0284c7"
+            strokeWidth={1.5}
+            dash={[5, 5]}
+            listening={false}
+          />
+          {cutPath ? (
+            <Path
+              data={cutPath}
+              scaleX={ratio}
+              scaleY={ratio}
+              stroke="#d946ef"
+              strokeWidth={1.5 / ratio}
+              listening={false}
+            />
+          ) : (
+            <Rect
+              x={geometry.inset * ratio}
+              y={geometry.inset * ratio}
+              width={geometry.size * ratio}
+              height={geometry.size * ratio}
+              cornerRadius={geometry.radius * ratio}
+              stroke="#d946ef"
+              strokeWidth={1.5}
+              listening={false}
+            />
+          )}
+          {!isLocked && image && (
             <Transformer
               ref={transformerRef}
+              flipEnabled={false}
               rotateEnabled
-              enabledAnchors={[
-                "top-left",
-                "top-center",
-                "top-right",
-                "middle-left",
-                "middle-right",
-                "bottom-left",
-                "bottom-center",
-                "bottom-right",
-              ]}
               keepRatio={false}
-              borderStroke="rgba(16, 31, 63, 0.9)"
-              borderDash={[6, 4]}
-              anchorStroke="rgba(16, 31, 63, 0.9)"
-              anchorFill="white"
-              anchorCornerRadius={16}
-              anchorSize={10}
-              boundBoxFunc={(oldBox, newBox) => {
-                if (Math.abs(newBox.width) < 24 || Math.abs(newBox.height) < 24) {
-                  return oldBox;
-                }
-
-                return newBox;
-              }}
+              anchorSize={12}
+              anchorCornerRadius={4}
+              borderStroke="#334155"
+              anchorStroke="#334155"
+              anchorFill="#fff"
+              rotateAnchorOffset={20}
+              boundBoxFunc={(oldBox, nextBox) =>
+                Math.abs(nextBox.width) < 8 || Math.abs(nextBox.height) < 8
+                  ? oldBox
+                  : nextBox
+              }
             />
-          ) : null}
+          )}
         </Layer>
       </Stage>
     </div>

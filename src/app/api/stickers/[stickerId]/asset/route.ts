@@ -38,6 +38,8 @@ export async function GET(
 
   const url = new URL(request.url);
   const variant = url.searchParams.get("variant") ?? "final";
+  if (!["original", "preview", "final"].includes(variant))
+    return jsonError("Invalid asset variant", 422);
   const download = url.searchParams.get("download") === "1";
   const selectedPath =
     variant === "original"
@@ -50,8 +52,14 @@ export async function GET(
     return jsonError(t("api.requestedAssetUnavailable"), 404);
   }
 
-  const buffer = await readStoredFile(selectedPath);
-  const fileName = variant === "preview" ? `sticker-${sticker.id}-preview.png` : `sticker-${sticker.id}.png`;
+  const buffer = await readStoredFile(selectedPath).catch(() => null);
+  if (!buffer) return jsonError(t("api.requestedAssetUnavailable"), 404);
+  const fileName =
+    variant === "original"
+      ? `sticker-${sticker.id}-original.${selectedPath.split(".").pop() ?? "png"}`
+      : variant === "preview"
+        ? `sticker-${sticker.id}-preview.png`
+        : `sticker-${sticker.id}.png`;
 
   return new Response(buffer, {
     headers: {

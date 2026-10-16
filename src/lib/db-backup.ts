@@ -15,13 +15,19 @@ function runCommand(command: string, args: string[], input?: Buffer) {
     child.stdout.on("data", (chunk) => stdout.push(Buffer.from(chunk)));
     child.stderr.on("data", (chunk) => stderr.push(Buffer.from(chunk)));
     child.on("error", reject);
+    child.stdin.on("error", reject);
     child.on("close", (code) => {
       if (code === 0) {
         resolve(Buffer.concat(stdout));
         return;
       }
 
-      reject(new Error(Buffer.concat(stderr).toString("utf8") || `${command} exited with code ${code}`));
+      reject(
+        new Error(
+          Buffer.concat(stderr).toString("utf8") ||
+            `${command} exited with code ${code}`,
+        ),
+      );
     });
 
     if (input) {
@@ -29,6 +35,19 @@ function runCommand(command: string, args: string[], input?: Buffer) {
     }
     child.stdin.end();
   });
+}
+
+function postgresUrl(value: string) {
+  const url = new URL(value);
+  for (const key of [
+    "schema",
+    "connection_limit",
+    "pool_timeout",
+    "pgbouncer",
+    "connect_timeout",
+  ])
+    url.searchParams.delete(key);
+  return url.toString();
 }
 
 export async function exportDatabaseSql() {
@@ -40,7 +59,7 @@ export async function exportDatabaseSql() {
 
   return runCommand("pg_dump", [
     "--dbname",
-    databaseUrl,
+    postgresUrl(databaseUrl),
     "--clean",
     "--if-exists",
     "--no-owner",
@@ -56,5 +75,15 @@ export async function importDatabaseSql(sql: Buffer) {
     throw new Error("DATABASE_URL is not configured.");
   }
 
-  await runCommand("psql", ["--dbname", databaseUrl, "-v", "ON_ERROR_STOP=1"], sql);
+  await runCommand(
+    "psql",
+    [
+      "--dbname",
+      postgresUrl(databaseUrl),
+      "--single-transaction",
+      "-v",
+      "ON_ERROR_STOP=1",
+    ],
+    sql,
+  );
 }

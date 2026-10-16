@@ -8,9 +8,9 @@ type StatsCardProps = {
 
 export function StatsCard({ label, value, helper }: StatsCardProps) {
   return (
-    <Card className="rounded-[28px]">
-      <CardContent className="space-y-2 p-5">
-        <div className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700/75 dark:text-sky-300/75">{label}</div>
+    <Card className="rounded-[22px]">
+      <CardContent className="space-y-2 p-4">
+        <div className="text-xs font-semibold uppercase tracking-[0.08em] text-sky-700/75 dark:text-sky-300/75">{label}</div>
         <div className="text-3xl font-semibold text-slate-950 dark:text-slate-100">{value}</div>
         {helper ? <p className="text-sm text-muted-foreground">{helper}</p> : null}
       </CardContent>

@@ -3,6 +3,7 @@ import { StickerStatus } from "@prisma/client";
 import { getCurrentUser } from "@/lib/auth/session";
 import { jsonError, jsonSuccess } from "@/lib/http";
 import { getTranslator } from "@/lib/i18n-server";
+import { ensureQueueLayout, withQueueLock } from "@/lib/queue-data";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(
@@ -27,14 +28,22 @@ export async function POST(
     return jsonError(t("api.onlySubmittedCanBeApproved"), 422);
   }
 
-  await prisma.sticker.update({
-    where: { id: sticker.id },
-    data: {
-      status: StickerStatus.APPROVED,
-      approvedAt: new Date(),
-      rejectReason: null,
-    },
+  const updated = await withQueueLock(async (tx) => {
+    const result = await tx.sticker.updateMany({
+      where: { id: sticker.id, status: StickerStatus.SUBMITTED },
+      data: {
+        status: StickerStatus.APPROVED,
+        approvedAt: new Date(),
+        rejectReason: null,
+      },
+    });
+
+    if (result.count === 1) await ensureQueueLayout(tx);
+    return result;
   });
+
+  if (updated.count !== 1)
+    return jsonError("Order changed; reload this page.", 409);
 
   return jsonSuccess({
     success: true,

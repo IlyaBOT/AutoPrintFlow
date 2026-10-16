@@ -6,6 +6,12 @@ export type StickerEditorState = {
   scaleX: number;
   scaleY: number;
   rotation: number;
+  crop?: { x: number; y: number; width: number; height: number };
+  flipX?: boolean;
+  flipY?: boolean;
+  cutShape?: "square" | "rounded" | "contour";
+  cutSizeMm?: number;
+  borderMm?: number;
 };
 
 export type StickerAssetVariant = "original" | "preview" | "final";
@@ -25,9 +31,26 @@ export type QueueStickerSummary = {
   previewFilePath: string | null;
   status: StickerStatus;
   userId: string;
+  userName?: string;
+  userEmail?: string;
+  printStripeId?: string | null;
+  printSlot?: number | null;
+};
+
+export type PrintStripeDefinition = {
+  id: string;
+  position: number;
+  label: string | null;
+  isManual: boolean;
+  customerId: string | null;
 };
 
 export type QueueStripe = {
+  id?: string;
+  position?: number;
+  label?: string | null;
+  isManual?: boolean;
+  customerId?: string | null;
   index: number;
   sheetIndex: number;
   positionInSheet: number;
@@ -50,4 +73,29 @@ export type QueueStats = {
   submittedCount: number;
   approvedWaitingCount: number;
   printedCount: number;
+};
+
+export type QueueManagerData = {
+  sheetSnapshots: Array<{
+    index: number;
+    layout: string;
+    stickerIds: string[];
+  }>;
+  revision: string;
+  separateCustomers: boolean;
+  totalSheets: number;
+  stripes: Array<{
+    id: string;
+    index: number;
+    sheetIndex: number;
+    positionInSheet: number;
+    label: string | null;
+    isManual: boolean;
+    slots: Array<{
+      id: string;
+      userId: string;
+      userName: string;
+      userEmail: string;
+    } | null>;
+  }>;
 };

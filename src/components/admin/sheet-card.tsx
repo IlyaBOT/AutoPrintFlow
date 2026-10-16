@@ -1,22 +1,38 @@
 "use client";
 
 import Link from "next/link";
+import { ProductionDownloads } from "./production-downloads";
+import {
+  sheetSnapshotQuery,
+  sheetStickerIds,
+  sheetLayoutToken,
+} from "@/lib/queue-snapshot";
 
 import { useI18n } from "@/components/providers/i18n-provider";
 import { SheetPrintButton } from "@/components/admin/sheet-print-button";
 import type { QueueSheet } from "@/types/stickers";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { NerdIcon } from "@/components/ui/nerd-icon";
 import { pluralize } from "@/lib/utils";
 
 export function SheetCard({ sheet }: { sheet: QueueSheet }) {
   const { locale, t } = useI18n();
+  const snapshot = sheetSnapshotQuery(sheet);
 
   return (
     <Card className="overflow-hidden rounded-[32px]">
       <CardHeader>
-        <CardTitle className="text-xl">{t("admin.sheetTitle", { index: sheet.index })}</CardTitle>
+        <CardTitle className="text-xl">
+          {t("admin.sheetTitle", { index: sheet.index })}
+        </CardTitle>
         <CardDescription>
           {t("admin.sheetSummary", {
             stripeCount: sheet.stripeCount,
@@ -35,22 +51,30 @@ export function SheetCard({ sheet }: { sheet: QueueSheet }) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="mx-auto w-full overflow-hidden rounded-[24px] border border-white/60 bg-white/80 p-3 md:max-w-[70%]">
+        <div className="mx-auto w-full overflow-hidden rounded-[24px] border border-white/60 bg-white/80 p-3 md:max-w-[90%]">
           <img
-            src={`/api/admin/queue/sheet/${sheet.index}`}
+            src={`/api/admin/queue/sheet/${sheet.index}?${snapshot}`}
             alt={t("admin.sheetAlt", { index: sheet.index })}
             className="aspect-[1.414/1] w-full rounded-[20px] object-cover"
           />
         </div>
       </CardContent>
-      <CardFooter className="flex gap-3">
+      <CardFooter className="flex flex-wrap gap-2">
+        <ProductionDownloads sheetIndex={sheet.index} snapshot={snapshot} />
         <Button asChild className="flex-1" variant="secondary">
-          <a href={`/api/admin/queue/sheet/${sheet.index}?download=1`}>
+          <a
+            href={`/api/admin/queue/sheet/${sheet.index}?download=1&${snapshot}`}
+          >
             <NerdIcon className="text-sm" name="download" />
             {t("admin.downloadA4")}
           </a>
         </Button>
-        <SheetPrintButton className="flex-1" sheetIndex={sheet.index} />
+        <SheetPrintButton
+          className="flex-1"
+          sheetIndex={sheet.index}
+          stickerIds={sheetStickerIds(sheet)}
+          layout={sheetLayoutToken(sheet)}
+        />
         <Button asChild className="flex-1" variant="ghost">
           <Link href={`/admin/sheets/${sheet.index}`}>
             <NerdIcon className="text-sm" name="layers" />

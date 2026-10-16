@@ -12,3 +12,10 @@ storage/*
 !storage/generated-sheets/.gitkeep
 coverage
 .DS_Store
+
+test-results/
+playwright-report/
+*.tsbuildinfo
+backups/
+
+release/

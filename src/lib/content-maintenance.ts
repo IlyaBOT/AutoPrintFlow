@@ -3,6 +3,7 @@ import "server-only";
 import fs from "fs/promises";
 import path from "path";
 
+import { withQueueLock } from "@/lib/queue-data";
 import { prisma } from "@/lib/prisma";
 import { resolveStoragePath, STORAGE_DIRS } from "@/lib/storage";
 
@@ -32,7 +33,7 @@ export async function deleteStickerWithAssets(stickerId: string) {
     return;
   }
 
-  await prisma.sticker.delete({ where: { id: stickerId } });
+  await withQueueLock((tx) => tx.sticker.delete({ where: { id: stickerId } }));
   await Promise.all([
     safeDelete(sticker.originalFilePath),
     safeDelete(sticker.finalFilePath),
@@ -43,13 +44,20 @@ export async function deleteStickerWithAssets(stickerId: string) {
 }
 
 export async function clearGeneratedQueueAssets() {
-  const targets = [STORAGE_DIRS.generatedSheets, STORAGE_DIRS.generatedStripes].map((dir) => resolveStoragePath(dir));
+  const targets = [
+    STORAGE_DIRS.generatedSheets,
+    STORAGE_DIRS.generatedStripes,
+  ].map((dir) => resolveStoragePath(dir));
 
   await Promise.all(
     targets.map(async (target) => {
       try {
         const entries = await fs.readdir(target);
-        await Promise.all(entries.map((entry) => fs.unlink(path.join(target, entry)).catch(() => undefined)));
+        await Promise.all(
+          entries.map((entry) =>
+            fs.unlink(path.join(target, entry)).catch(() => undefined),
+          ),
+        );
       } catch {
         // ignore missing directories
       }

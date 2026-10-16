@@ -43,7 +43,7 @@ export default async function DashboardPage() {
 
   return (
     <main className="page-shell space-y-8">
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <section className="grid grid-cols-2 gap-3 xl:grid-cols-5">
         <StatsCard label={t("dashboard.statsDraftsLabel")} value={countFor("DRAFT")} helper={t("dashboard.statsDraftsHelper")} />
         <StatsCard label={t("dashboard.statsSubmittedLabel")} value={countFor("SUBMITTED")} helper={t("dashboard.statsSubmittedHelper")} />
         <StatsCard label={t("dashboard.statsApprovedQueueLabel")} value={queueStats.totalApprovedStickers} helper={t("dashboard.statsApprovedQueueHelper")} />

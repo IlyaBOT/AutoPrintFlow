@@ -49,6 +49,7 @@ model User {
   updatedAt    DateTime  @updatedAt
   sessions     Session[]
   stickers     Sticker[]
+  printStripes PrintStripe[] @relation("StripeCustomer")
 }
 
 model Session {
@@ -93,6 +94,11 @@ model Sticker {
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  printStripeId    String?
+  printSlot        Int?
+  printStripe      PrintStripe?  @relation(fields: [printStripeId], references: [id], onDelete: Restrict)
+
+  @@unique([printStripeId, printSlot])
 
   @@index([userId, createdAt])
   @@index([status, approvedAt])
@@ -100,8 +106,23 @@ model Sticker {
   @@index([printedAt])
 }
 
+model PrintStripe {
+  id         String   @id @default(cuid())
+  position   Int      @unique @default(autoincrement())
+  label      String?
+  isManual   Boolean  @default(false)
+  customerId String?
+  customer   User?    @relation("StripeCustomer", fields: [customerId], references: [id], onDelete: SetNull)
+  stickers   Sticker[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([customerId, isManual])
+}
+
 model SystemSettings {
   id                    Int      @id @default(1)
+  separateCustomerStripes Boolean @default(true)
   instanceName          String   @default("AutoPrint Flow")
   instanceIconFilePath  String?
   stripeBackgroundPath  String?

@@ -1,13 +1,26 @@
 # AutoPrintFlow
 
-AutoPrintFlow is a production-oriented MVP web platform for an online sticker print service. Users can upload artwork, edit it inside a square sticker frame, preview the result and its stripe placement, submit the sticker for moderation, and download their own final 42x42 mm PNG. Admins can moderate submissions, inspect the live print queue grouped into stripes and A4 sheets, and download sticker, stripe, or full-sheet production layouts.
+AutoPrintFlow is a web platform for ordering printed stickers: private uploads, a constrained 42 × 42 mm artwork editor, moderation, A4 production layouts, layered PSD export, and individual vector cutting outlines for an 80 × 80 mm machine.
 
-The repository uses a real Next.js App Router stack with Prisma, PostgreSQL, cookie-backed custom sessions, protected file serving, and Sharp-based image generation for sticker, stripe, and A4 exports.
+Version **0.3.0** refreshes the interface with restrained glass surfaces, compact mobile navigation and a new production workspace. Existing environment variables and Docker volumes remain compatible; startup applies the additive placement migration automatically.
+
+- [Обновление существующего сервера — две команды](docs/UPGRADE.md)
+- [Раскладка по аккаунтам, ручные стрипы и отправления](docs/QUEUE-PLACEMENT.md)
+- [Геометрия редактора, PSD и LightBurn](docs/PRINTING.md)
+- [Отчёт о ревью и исправлениях](docs/REVIEW.md)
+- [Локальные проверки и ограничения](docs/TESTING.md)
+
+```bash
+git pull --ff-only
+bash scripts/update.sh
+```
+
+Run these on the existing server after the release commit is published to its Git branch. The update script builds the image, backs up database/files/environment, restarts the app and checks its health. It does not overwrite `.env`, change ports, recreate volumes or reset the administrator password.
 
 ## Stack
 
-- Next.js 15 with App Router
-- React 19
+- Node.js 22, Next.js 15.5 with App Router
+- React 19.2 / React Konva 19.2
 - TypeScript
 - Tailwind CSS
 - shadcn/ui-style local component set
@@ -25,13 +38,16 @@ The repository uses a real Next.js App Router stack with Prisma, PostgreSQL, coo
 - Registration, login, and logout with hashed passwords and secure session cookies
 - Session storage in PostgreSQL with hashed session tokens
 - Private user uploads with protected file access
-- Square sticker editor with move, zoom, stretch, rotate, fit, fill, and reset controls
+- Sticker editor with constrained move/zoom/stretch/rotate, flip, non-destructive source crop, fit/reset and undo/redo
+- Hard 42 mm template boundary, a visible cutting path and a recommended 2 mm safety margin
+- Square, rounded-square or alpha-traced cutting outlines; 42 mm cutting size by default, optional 40 mm
 - Real sticker PNG export at 496x496 px (42x42 mm at 300 DPI)
-- Live stripe placement preview in the editor
+- Final print preview plus a compact view of the planned stripe slots
 - Moderation states: `DRAFT`, `SUBMITTED`, `APPROVED`, `REJECTED`, `PRINTED`
 - User dashboard showing only the current user's stickers
 - Admin dashboard with moderation views and queue grouping into stripes and A4 sheets
-- Download routes for sticker PNGs, stripe PNGs, and A4 PNGs
+- Protected downloads for PNG, layered A4 PSD and production ZIPs containing one SVG cut job per sticker
+- Admin filtering, search, pagination, versioned draft saves and sheet identity checks
 - Dockerized app + Postgres startup
 
 ## Layout and print logic
@@ -42,8 +58,8 @@ The repository uses a real Next.js App Router stack with Prisma, PostgreSQL, coo
 - 1 stripe = 8 stickers
 - 1 A4 sheet = 3 stripes
 - Queue counts:
-  - `stripes = ceil(approved_stickers / 8)`
-  - `sheets = ceil(stripes / 3)`
+  - Automatic stripes are separated per account by default (8 slots each); manual shipping stripes retain their positions.
+  - `sheets = ceil(actual_stripes / 3)`, including partially filled stripes.
 
 The stripe and A4 generators now mirror the uploaded PSD reference: sky/grass stripe background, rounded white sticker cards, the black “Printed by IB-WorkShop. 2026” footer band, and clean landscape A4 placement.
 
@@ -86,7 +102,7 @@ Optional security/runtime variables:
 
 For `docker compose`, the container forces `NODE_ENV=production`. Keep `NODE_ENV=development` only for local `npm run dev`.
 
-Default seeded admin credentials:
+New installations seed these default credentials (change them in `.env` before first production startup). Existing accounts are never overwritten by the seed:
 
 - Email: `admin@autoprintflow.local`
 - Password: `admin12345`
@@ -96,7 +112,7 @@ Default seeded admin credentials:
 1. Install dependencies:
 
 ```bash
-npm install
+npm ci
 ```
 
 2. Create your environment file:
