@@ -1,4 +1,4 @@
-FROM node:22-bookworm-slim
+FROM node:22-bookworm-slim AS base
 
 WORKDIR /app
 
@@ -12,6 +12,8 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends postgresql-client-16 \
   && rm -rf /var/lib/apt/lists/*
 
+FROM base AS build
+
 COPY package.json package-lock.json* ./
 RUN npm ci
 
@@ -21,7 +23,13 @@ RUN mkdir -p storage/originals storage/final-stickers storage/previews storage/g
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 ENV NODE_ENV=production
-RUN npm prune --omit=dev
+RUN npm prune --omit=dev \
+  && rm -rf .next/cache
+
+FROM base AS runtime
+
+ENV NEXT_TELEMETRY_DISABLED=1 NODE_ENV=production
+COPY --from=build /app/ ./
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=90s --retries=4 CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 

@@ -14,7 +14,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 
-async function scenario(failure = "") {
+async function scenario(failure = "", args: string[] = []) {
   const root = await mkdtemp(path.join(tmpdir(), "autoprintflow-update-"));
   await mkdir(path.join(root, "scripts"));
   await mkdir(path.join(root, "bin"));
@@ -33,7 +33,8 @@ async function scenario(failure = "") {
 set -eu
 printf '%s\\n' "$*" >> "$FAKE_DOCKER_LOG"
 case "$*" in
-  'compose images -q app') if [[ "$FAKE_DOCKER_FAILURE" != missing ]]; then echo previous-image; fi ;;
+  'compose ps --all -q app') if [[ "$FAKE_DOCKER_FAILURE" != missing ]]; then echo previous-container; fi ;;
+  'container inspect --format {{.Image}} previous-container') echo previous-image ;;
   'compose build app') if [[ "$FAKE_DOCKER_FAILURE" == build ]]; then exit 2; fi ;;
   'compose exec -T postgres pg_restore --file=/dev/null')
     if [[ "$FAKE_DOCKER_FAILURE" == backup ]]; then exit 4; fi
@@ -46,16 +47,22 @@ esac
     { mode: 0o755 },
   );
   const log = path.join(root, "docker.log");
-  const result = spawnSync("bash", [path.join(root, "scripts/update.sh")], {
-    cwd: root,
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      PATH: `${path.join(root, "bin")}:${process.env.PATH}`,
-      FAKE_DOCKER_LOG: log,
-      FAKE_DOCKER_FAILURE: failure,
+  const result = spawnSync(
+    "bash",
+    [path.join(root, "scripts/update.sh"), ...args],
+    {
+      cwd: root,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        PATH: `${path.join(root, "bin")}:${process.env.PATH}`,
+        FAKE_DOCKER_LOG: log,
+        FAKE_DOCKER_FAILURE: failure,
+        AUTOPRINTFLOW_ROLLBACK_IMAGE:
+          failure === "recovery" ? "recovery-image" : "",
+      },
     },
-  });
+  );
   return { root, result, log: await readFile(log, "utf8") };
 }
 test("update backs up existing configuration/files before replacing the app", async () => {
@@ -97,6 +104,18 @@ test("update backs up existing configuration/files before replacing the app", as
           run.log.indexOf("compose up -d --no-build --no-deps --wait"),
     );
     assert.doesNotMatch(run.log, /down -v|volume rm/);
+  } finally {
+    await rm(run.root, { recursive: true, force: true });
+  }
+});
+test("an imported image uses the same backup and health checks", async () => {
+  const run = await scenario("recovery", ["--no-build"]);
+  try {
+    assert.equal(run.result.status, 0, run.result.stderr);
+    assert.doesNotMatch(run.log, /compose build app/);
+    assert.match(run.log, /image tag recovery-image autoprintflow-rollback:/);
+    assert.match(run.log, /pg_restore --file=\/dev\/null/);
+    assert.match(run.log, /compose up -d --no-build --no-deps --wait/);
   } finally {
     await rm(run.root, { recursive: true, force: true });
   }

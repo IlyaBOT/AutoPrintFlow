@@ -12,6 +12,8 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { getLocale } from "@/lib/i18n-server";
 import { getQueueStatsFromDb } from "@/lib/queue-data";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const [user, stats, locale] = await Promise.all([
     getCurrentUser(),

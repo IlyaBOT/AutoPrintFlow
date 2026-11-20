@@ -1,19 +1,24 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 cd "$(dirname "$0")/.."
+if [[ $# -gt 1 || ($# -eq 1 && "$1" != --no-build) ]]; then
+  echo 'Usage: scripts/update.sh [--no-build]' >&2
+  exit 2
+fi
 if [[ ! -f .env ]]; then echo 'Missing .env. Keep the existing server .env before updating.' >&2; exit 1; fi
 if ! docker compose version >/dev/null 2>&1; then echo 'Docker Compose v2 is required.' >&2; exit 1; fi
 umask 077
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
-previous_image="$(docker compose images -q app | head -n 1)"
-if [[ -z "$previous_image" ]]; then
+previous_container="$(docker compose ps --all -q app | head -n 1)"
+if [[ -z "$previous_container" ]]; then
   echo 'Existing app container not found in this Compose project.' >&2
   exit 1
 fi
+previous_image="${AUTOPRINTFLOW_ROLLBACK_IMAGE:-$(docker container inspect --format '{{.Image}}' "$previous_container")}"
 rollback_tag="autoprintflow-rollback:$stamp"
 docker image tag "$previous_image" "$rollback_tag"
 # Build first: the running app keeps serving if the image cannot be built.
-docker compose build app
+if [[ $# -eq 0 ]]; then docker compose build app; fi
 backup_dir="backups/$stamp"
 mkdir -p backups
 mkdir "$backup_dir"
