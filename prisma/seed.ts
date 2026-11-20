@@ -107,44 +107,24 @@ async function main() {
     },
   ];
 
-  for (const profile of profiles) {
-    const dbProfile = await prisma.printProfile.upsert({
-      where: { slug: profile.slug },
-      update: {
-        name: profile.name,
-        description: profile.description,
-        type: profile.type,
-        productionUnit: profile.productionUnit,
-        acceptsMaterials: profile.acceptsMaterials,
-        isActive: true,
-      },
-      create: {
-        slug: profile.slug,
-        name: profile.name,
-        description: profile.description,
-        type: profile.type,
-        productionUnit: profile.productionUnit,
-        acceptsMaterials: profile.acceptsMaterials,
-        isActive: true,
-      },
-    });
-
-    for (const material of profile.materials) {
-      await prisma.printMaterial.upsert({
-        where: {
-          profileId_name: {
-            profileId: dbProfile.id,
-            name: material.name,
-          },
-        },
-        update: material,
-        create: {
-          profileId: dbProfile.id,
-          ...material,
-        },
+  await prisma.$transaction(async (tx) => {
+    for (const { materials, ...profile } of profiles) {
+      const [createdProfile] = await tx.printProfile.createManyAndReturn({
+        data: profile,
+        skipDuplicates: true,
+        select: { id: true },
       });
+
+      if (createdProfile && materials.length > 0) {
+        await tx.printMaterial.createMany({
+          data: materials.map((material) => ({
+            ...material,
+            profileId: createdProfile.id,
+          })),
+        });
+      }
     }
-  }
+  });
 }
 
 main()

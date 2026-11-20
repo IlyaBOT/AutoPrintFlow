@@ -33,11 +33,14 @@ async function scenario(failure = "") {
 set -eu
 printf '%s\\n' "$*" >> "$FAKE_DOCKER_LOG"
 case "$*" in
-  'compose images -q app') echo previous-image ;;
+  'compose images -q app') if [[ "$FAKE_DOCKER_FAILURE" != missing ]]; then echo previous-image; fi ;;
   'compose build app') if [[ "$FAKE_DOCKER_FAILURE" == build ]]; then exit 2; fi ;;
+  'compose exec -T postgres pg_restore --file=/dev/null')
+    if [[ "$FAKE_DOCKER_FAILURE" == backup ]]; then exit 4; fi
+    cat > /dev/null ;;
   'compose exec -T postgres '*) echo DATABASE_BACKUP ;;
-  'compose run --rm --no-deps -T --entrypoint tar '*) echo STORAGE_BACKUP ;;
-  'compose up -d --no-build --wait '*) if [[ "$FAKE_DOCKER_FAILURE" == health ]]; then exit 3; fi ;;
+  'compose run --rm --no-deps -T --entrypoint tar '*) tar -czf - .env ;;
+  'compose up -d --no-build --no-deps --wait '*) if [[ "$FAKE_DOCKER_FAILURE" == health ]]; then exit 3; fi ;;
 esac
 `,
     { mode: 0o755 },
@@ -71,25 +74,38 @@ test("update backs up existing configuration/files before replacing the app", as
     );
     assert.match(
       await readFile(path.join(backup, "rollback.yml"), "utf8"),
-      /^services:\n  app:\n    image: "autoprintflow-rollback:/,
+      /^services:\n  app:\n    image: "autoprintflow-rollback:[^"]+"\n    command: \["npm", "run", "start"\]\n$/,
     );
     assert.match(
       await readFile(path.join(backup, "database.dump"), "utf8"),
       /DATABASE_BACKUP/,
     );
-    assert.match(
-      await readFile(path.join(backup, "storage.tar.gz"), "utf8"),
-      /STORAGE_BACKUP/,
+    const storageArchive = spawnSync(
+      "tar",
+      ["-tzf", path.join(backup, "storage.tar.gz")],
+      { encoding: "utf8" },
     );
+    assert.equal(storageArchive.status, 0, storageArchive.stderr);
+    assert.equal(storageArchive.stdout.trim(), ".env");
     assert.ok(
       run.log.indexOf("compose build app") <
         run.log.indexOf("compose stop app"),
     );
     assert.ok(
-      run.log.indexOf("pg_dump") <
-        run.log.indexOf("compose up -d --no-build --wait"),
+      run.log.indexOf("pg_dump") < run.log.indexOf("pg_restore") &&
+        run.log.indexOf("pg_restore") <
+          run.log.indexOf("compose up -d --no-build --no-deps --wait"),
     );
     assert.doesNotMatch(run.log, /down -v|volume rm/);
+  } finally {
+    await rm(run.root, { recursive: true, force: true });
+  }
+});
+test("a missing app container leaves the Compose project alone", async () => {
+  const run = await scenario("missing");
+  try {
+    assert.notEqual(run.result.status, 0);
+    assert.doesNotMatch(run.log, /compose (build|stop|up)/);
   } finally {
     await rm(run.root, { recursive: true, force: true });
   }
@@ -103,13 +119,23 @@ test("a build failure leaves the running app alone", async () => {
     await rm(run.root, { recursive: true, force: true });
   }
 });
+test("a backup verification failure rolls back before the new app starts", async () => {
+  const run = await scenario("backup");
+  try {
+    assert.notEqual(run.result.status, 0);
+    assert.doesNotMatch(run.log, /compose up -d --no-build --no-deps --wait/);
+    assert.match(run.log, /rollback\.yml up -d --no-build --no-deps app/);
+  } finally {
+    await rm(run.root, { recursive: true, force: true });
+  }
+});
 test("a health failure starts the saved previous image and reports failure", async () => {
   const run = await scenario("health");
   try {
     assert.notEqual(run.result.status, 0);
     assert.match(
       run.log,
-      /compose -f docker-compose.yml -f backups\/[^\n]+\/rollback.yml up -d --no-build app/,
+      /compose -f docker-compose.yml -f backups\/[^\n]+\/rollback.yml up -d --no-build --no-deps app/,
     );
   } finally {
     await rm(run.root, { recursive: true, force: true });
