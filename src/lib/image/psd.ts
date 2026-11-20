@@ -1,5 +1,5 @@
 import sharp from "sharp";
-import { writePsdBuffer, type Layer } from "ag-psd";
+import { writePsdUint8Array, type Layer } from "ag-psd";
 import { PRINT_DPI } from "./constants";
 
 export async function pngImageData(png: Buffer) {
@@ -10,7 +10,7 @@ export async function pngImageData(png: Buffer) {
   return {
     width: info.width,
     height: info.height,
-    data: new Uint8ClampedArray(data),
+    data: new Uint8ClampedArray(data.buffer, data.byteOffset, data.byteLength),
   };
 }
 export async function writeLayeredPsd(params: {
@@ -35,7 +35,7 @@ export async function writeLayeredPsd(params: {
       top: layer.top,
       imageData: await pngImageData(layer.png),
     });
-  return writePsdBuffer(
+  const psd = writePsdUint8Array(
     {
       width: params.width,
       height: params.height,
@@ -54,4 +54,5 @@ export async function writeLayeredPsd(params: {
     },
     { generateThumbnail: false, noBackground: true },
   );
+  return Buffer.from(psd.buffer, psd.byteOffset, psd.byteLength);
 }

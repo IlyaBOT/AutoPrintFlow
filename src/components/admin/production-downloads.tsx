@@ -15,13 +15,19 @@ export function ProductionDownloads({
   const [pending, setPending] = useState<string | null>(null);
   async function download(format: "psd" | "zip") {
     setPending(format);
+    const downloadFailed =
+      locale === "ru"
+        ? "Скачивание прервалось. Повторите попытку."
+        : "The download was interrupted. Try again.";
     try {
       const response = await fetch(
         `/api/admin/production/sheet/${sheetIndex}?format=${format}&${snapshot}`,
       );
       if (!response.ok) {
-        const body = await response.json();
-        throw new Error(body.error);
+        const body = await response.json().catch(() => null);
+        throw new Error(
+          body?.error ?? `${downloadFailed} (HTTP ${response.status})`,
+        );
       }
       const url = URL.createObjectURL(await response.blob());
       const link = document.createElement("a");
@@ -30,7 +36,11 @@ export function ProductionDownloads({
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 30_000);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Export failed");
+      toast.error(
+        error instanceof Error && !(error instanceof TypeError)
+          ? error.message
+          : downloadFailed,
+      );
     } finally {
       setPending(null);
     }

@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { jsonError } from "@/lib/http";
 import { getApprovedQueueLayout } from "@/lib/queue-data";
 import { matchesSheetSnapshot } from "@/lib/queue-snapshot";
-import { renderProductionSheet } from "@/lib/production";
+import { renderProductionSheet, streamSheetExport } from "@/lib/production";
 import { enforceRateLimit, RequestSecurityError } from "@/lib/request-security";
 let exportInProgress = false;
 
@@ -46,18 +46,30 @@ export async function GET(
         { status: 429, headers: { "Retry-After": "3" } },
       );
     exportInProgress = true;
+    let downloading = false;
     try {
-      const buffer = await renderProductionSheet(sheet, format === "zip");
-      return new Response(new Uint8Array(buffer), {
-        headers: {
-          "Content-Type":
-            format === "psd" ? "image/vnd.adobe.photoshop" : "application/zip",
-          "Content-Disposition": `attachment; filename="sheet-${index}.${format}"`,
-          "Cache-Control": "private, no-store",
+      const result = await renderProductionSheet(sheet, format === "zip");
+      request.signal.throwIfAborted();
+      const response = new Response(
+        streamSheetExport(result, () => {
+          exportInProgress = false;
+        }),
+        {
+          headers: {
+            "Content-Type":
+              format === "psd"
+                ? "image/vnd.adobe.photoshop"
+                : "application/zip",
+            "Content-Disposition": `attachment; filename="sheet-${index}.${format}"`,
+            "Cache-Control": "private, no-store",
+            "X-Accel-Buffering": "no",
+          },
         },
-      });
+      );
+      downloading = true;
+      return response;
     } finally {
-      exportInProgress = false;
+      if (!downloading) exportInProgress = false;
     }
   } catch (error) {
     console.error("Production export failed", error);
