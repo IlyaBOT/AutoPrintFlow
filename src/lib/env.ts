@@ -42,7 +42,7 @@ export function getEnv(): ServerEnv {
 
   if (!parsed.success) {
     throw new Error(
-      `Invalid environment variables:\n${parsed.error.errors
+      `Invalid environment variables:\n${parsed.error.issues
         .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
         .join("\n")}`,
     );
