@@ -3,9 +3,17 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { jsonError } from "@/lib/http";
 import { getApprovedQueueLayout } from "@/lib/queue-data";
 import { matchesSheetSnapshot } from "@/lib/queue-snapshot";
-import { renderProductionSheet, streamSheetExport } from "@/lib/production";
+import { renderProductionSheet, sheetExportChunks } from "@/lib/production";
+import {
+  findExportFile,
+  prepareExportFile,
+  serveExportFile,
+} from "@/lib/production-export-file";
 import { enforceRateLimit, RequestSecurityError } from "@/lib/request-security";
-let exportInProgress = false;
+import { getSystemSettings } from "@/lib/system-settings";
+
+let preparation:
+  { key: string; file: ReturnType<typeof prepareExportFile> } | undefined;
 
 export async function GET(
   request: Request,
@@ -31,46 +39,65 @@ export async function GET(
       409,
     );
   try {
-    await enforceRateLimit({
-      key: `production:${user.id}`,
-      limit: 12,
-      windowMs: 60_000,
-      errorMessage: "Слишком много экспортов. Повторите через минуту.",
-    });
-    if (exportInProgress)
-      return Response.json(
-        {
-          error:
-            "Другой экспорт уже выполняется. Повторите через несколько секунд. / Another export is running; retry shortly.",
-        },
-        { status: 429, headers: { "Retry-After": "3" } },
+    const settings = await getSystemSettings();
+    const key = JSON.stringify([
+      index,
+      format,
+      expectedLayout,
+      settings.updatedAt,
+      new Date().getFullYear(),
+      sheet.stripes.map(({ label, customerId }) => [label, customerId]),
+    ]);
+    let file = findExportFile(key);
+    const ifMatch = request.headers.get("If-Match");
+    if (
+      ifMatch &&
+      ifMatch !== "*" &&
+      !ifMatch.split(",").some((tag) => tag.trim() === file?.etag)
+    ) {
+      return jsonError(
+        "Экспорт изменился. Запустите скачивание заново. / The export changed. Start the download again.",
+        412,
       );
-    exportInProgress = true;
-    let downloading = false;
-    try {
-      const result = await renderProductionSheet(sheet, format === "zip");
-      request.signal.throwIfAborted();
-      const response = new Response(
-        streamSheetExport(result, () => {
-          exportInProgress = false;
-        }),
-        {
-          headers: {
-            "Content-Type":
-              format === "psd"
-                ? "image/vnd.adobe.photoshop"
-                : "application/zip",
-            "Content-Disposition": `attachment; filename="sheet-${index}.${format}"`,
-            "Cache-Control": "private, no-store",
-            "X-Accel-Buffering": "no",
-          },
-        },
-      );
-      downloading = true;
-      return response;
-    } finally {
-      if (!downloading) exportInProgress = false;
     }
+    if (!file) {
+      if (preparation && preparation.key !== key)
+        return Response.json(
+          {
+            error:
+              "Другой экспорт уже выполняется. Повторите через несколько секунд. / Another export is running; retry shortly.",
+          },
+          { status: 429, headers: { "Retry-After": "3" } },
+        );
+      preparation ??= {
+        key,
+        file: prepareExportFile(key, async () => {
+          await enforceRateLimit({
+            key: `production:${user.id}`,
+            limit: 12,
+            windowMs: 60_000,
+            errorMessage: "Слишком много экспортов. Повторите через минуту.",
+          });
+          const result = await renderProductionSheet(sheet, format === "zip");
+          return sheetExportChunks(result);
+        }).finally(() => {
+          preparation = undefined;
+        }),
+      };
+      file = await preparation.file;
+    }
+    if (request.signal.aborted) return new Response(null, { status: 499 });
+    return await serveExportFile(
+      file,
+      request.headers.get("Range"),
+      new Headers({
+        "Content-Type":
+          format === "psd" ? "image/vnd.adobe.photoshop" : "application/zip",
+        "Content-Disposition": `attachment; filename="sheet-${index}.${format}"`,
+        "Cache-Control": "private, no-store, no-transform",
+        "X-Accel-Buffering": "no",
+      }),
+    );
   } catch (error) {
     console.error("Production export failed", error);
     return jsonError(

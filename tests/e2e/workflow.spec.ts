@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import sharp from "sharp";
 import { readPsd } from "ag-psd";
 import { unzipSync, strFromU8 } from "fflate";
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient({
@@ -326,8 +326,10 @@ test("complete user and production workflow, permissions, mobile and exports", a
 });
 
 test("a full sheet exports 24 independent cuts and rejects a shifted queue", async ({
-  request,
+  context,
+  page,
 }) => {
+  const { request } = context;
   const source = await prisma.sticker.findUniqueOrThrow({
     where: { id: stickerId },
   });
@@ -355,12 +357,11 @@ test("a full sheet exports 24 independent cuts and rejects a shifted queue", asy
     const fullSnapshot = (
       await (await request.get("/api/admin/queue/layout")).json()
     ).sheetSnapshots[0];
-    const exported = await request.get(
-      `/api/admin/production/sheet/1?format=zip&ids=${encodeURIComponent(ids.slice(0, 24).join(","))}&layout=${encodeURIComponent(fullSnapshot.layout)}`,
-      { timeout: 120000 },
-    );
+    const exportUrl = `/api/admin/production/sheet/1?format=zip&ids=${encodeURIComponent(ids.slice(0, 24).join(","))}&layout=${encodeURIComponent(fullSnapshot.layout)}`;
+    const exported = await request.get(exportUrl, { timeout: 120000 });
     expect(exported.status()).toBe(200);
-    const files = unzipSync(await exported.body());
+    const archive = await exported.body();
+    const files = unzipSync(archive);
     expect(
       Object.keys(files).filter(
         (name) => name.startsWith("cuts/") && name.endsWith(".svg"),
@@ -379,6 +380,28 @@ test("a full sheet exports 24 independent cuts and rejects a shifted queue", asy
     expect(pngMeta.density).toBe(300);
     const placements = JSON.parse(strFromU8(files["placements.json"]));
     expect(placements.placements).toHaveLength(24);
+    const replaced = await request.get(exportUrl, {
+      headers: { Range: "bytes=0-15", "If-Match": '"stale-version"' },
+    });
+    expect(replaced.status()).toBe(412);
+
+    await context.addCookies([
+      { name: "apf_locale", value: "ru", domain: "localhost", path: "/" },
+    ]);
+    const ranges: Array<string | undefined> = [];
+    await page.route("**/api/admin/production/sheet/1?*", async (route) => {
+      ranges.push(route.request().headers()["range"]);
+      if (ranges.length === 1) await route.abort("failed");
+      else await route.continue();
+    });
+    await page.goto("/admin?view=production");
+    const downloadEvent = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Печать + резка" }).first().click();
+    const download = await downloadEvent;
+    expect(download.suggestedFilename()).toBe("sheet-1.zip");
+    expect((await readFile(await download.path())).equals(archive)).toBe(true);
+    expect(ranges.slice(0, 2)).toEqual(["bytes=0-4194303", "bytes=0-4194303"]);
+
     await prisma.sticker.update({
       where: { id: ids[0] },
       data: {

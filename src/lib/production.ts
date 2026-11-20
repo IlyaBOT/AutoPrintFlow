@@ -168,32 +168,6 @@ function* zipChunks(files: ArchiveFiles) {
   }
 }
 
-export function streamSheetExport(result: SheetExport, onClose: () => void) {
-  const chunks =
-    "files" in result ? zipChunks(result.files) : [result.psd].values();
-
-  return new ReadableStream<Uint8Array>({
-    pull(controller) {
-      try {
-        const chunk = chunks.next();
-        if (chunk.done) {
-          controller.close();
-          onClose();
-        } else {
-          controller.enqueue(chunk.value);
-        }
-      } catch (error) {
-        onClose();
-        console.error("Production download failed", error);
-        controller.error(error);
-      }
-    },
-    cancel() {
-      try {
-        chunks.return?.(undefined);
-      } finally {
-        onClose();
-      }
-    },
-  });
+export function sheetExportChunks(result: SheetExport) {
+  return "files" in result ? zipChunks(result.files) : [result.psd];
 }
